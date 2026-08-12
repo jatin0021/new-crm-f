@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Navbar from './components/layout/Navbar';
 import Dashboard from './pages/user/Dashboard';
 import AccountsPage from './pages/user/AccountsPage';
@@ -6,15 +6,66 @@ import FundsPage from './pages/user/FundsPage';
 import KYCPage from './pages/user/KYCPage';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import LiveChatWidget from './components/common/LiveChatWidget';
+import LoginPage from './pages/auth/LoginPage';
+import RegisterPage from './pages/auth/RegisterPage';
+import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
 
 export default function App() {
+  const [currentUser, setCurrentUser] = useState(null);
+  const [authView, setAuthView] = useState('login'); // 'login', 'register', 'forgot-password' or null when logged in
   const [activeTab, setActiveTab] = useState('Home');
+
+  // Check stored user session on mount
+  useEffect(() => {
+    const storedUser = localStorage.getItem('crm_user');
+    if (storedUser) {
+      try {
+        const parsed = JSON.parse(storedUser);
+        setCurrentUser(parsed);
+        setAuthView(null); // Show main CRM portal
+      } catch (e) {
+        localStorage.removeItem('crm_user');
+      }
+    }
+  }, []);
+
+  const handleLoginSuccess = (user) => {
+    setCurrentUser(user);
+    setAuthView(null);
+    setActiveTab('Home');
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('crm_jwt_token');
+    localStorage.removeItem('crm_user');
+    setCurrentUser(null);
+    setAuthView('login');
+  };
+
+  // Render Auth Views if user is not authenticated or explicitly viewing auth pages
+  if (authView === 'login') {
+    return <LoginPage onLoginSuccess={handleLoginSuccess} onNavigate={(view) => setAuthView(view)} />;
+  }
+
+  if (authView === 'register') {
+    return <RegisterPage onRegisterSuccess={handleLoginSuccess} onNavigate={(view) => setAuthView(view)} />;
+  }
+
+  if (authView === 'forgot-password') {
+    return <ForgotPasswordPage onNavigate={(view) => setAuthView(view)} />;
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans selection:bg-indigo-600 selection:text-white">
       
       {/* Top Navbar */}
-      <Navbar activeTab={activeTab} setActiveTab={setActiveTab} />
+      <Navbar 
+        activeTab={activeTab} 
+        setActiveTab={setActiveTab} 
+        currentUser={currentUser}
+        onLogout={handleLogout}
+        onOpenAuth={(view) => setAuthView(view)}
+      />
 
       {/* Main Content Area - Expansive Layout Container */}
       <main className="flex-1 w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-10 py-6 sm:py-8">
@@ -53,4 +104,5 @@ export default function App() {
     </div>
   );
 }
+
 

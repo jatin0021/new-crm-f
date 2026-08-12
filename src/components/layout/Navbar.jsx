@@ -18,7 +18,7 @@ import {
   X
 } from 'lucide-react';
 
-export default function Navbar({ activeTab = 'Home', setActiveTab = () => {} }) {
+export default function Navbar({ activeTab = 'Home', setActiveTab = () => {}, currentUser = null, onLogout = () => {}, onOpenAuth = () => {} }) {
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showLangMenu, setShowLangMenu] = useState(false);
@@ -235,7 +235,7 @@ export default function Navbar({ activeTab = 'Home', setActiveTab = () => {} }) 
                 >
                   <div className="px-4 py-3 border-b border-slate-100 bg-slate-50/50 rounded-t-2xl">
                     <p className="text-[10px] uppercase tracking-wider text-slate-400 font-bold">Logged in as</p>
-                    <p className="text-xs font-bold text-slate-900 truncate">john.trader@succeed.com</p>
+                    <p className="text-xs font-bold text-slate-900 truncate">{currentUser?.email || 'trader@example.com'}</p>
                     <div className="mt-1.5 flex items-center gap-1 text-[11px] font-semibold text-emerald-600 bg-emerald-50 w-max px-2 py-0.5 rounded-full">
                       <ShieldCheck className="w-3.5 h-3.5" /> Verified Trader
                     </div>
@@ -265,7 +265,10 @@ export default function Navbar({ activeTab = 'Home', setActiveTab = () => {} }) 
                   </div>
 
                   <div className="border-t border-slate-100 pt-1">
-                    <button className="w-full px-4 py-2 text-left text-xs font-bold text-rose-600 hover:bg-rose-50 flex items-center gap-2">
+                    <button 
+                      onClick={() => { setShowUserMenu(false); onLogout(); }}
+                      className="w-full px-4 py-2 text-left text-xs font-bold text-rose-600 hover:bg-rose-50 flex items-center gap-2 cursor-pointer"
+                    >
                       <LogOut className="w-3.5 h-3.5" /> Log Out
                     </button>
                   </div>
