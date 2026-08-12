@@ -5,9 +5,9 @@ import { API_BASE_URL } from '../../config/api';
 
 export default function LoginPage({ onLoginSuccess = () => {}, onNavigate = () => {} }) {
   const [activeLoginTab, setActiveLoginTab] = useState('email'); // 'email' or 'phone'
-  const [email, setEmail] = useState('trader@example.com');
+  const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
-  const [password, setPassword] = useState('password123');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
@@ -43,8 +43,16 @@ export default function LoginPage({ onLoginSuccess = () => {}, onNavigate = () =
         setErrorMessage(data.message || data.error || 'Invalid email or password');
       }
     } catch (err) {
-      if (email === 'trader@example.com' && password === 'password123') {
-        const demoUser = { id: 1, email: 'trader@example.com', first_name: 'John', last_name: 'Doe' };
+      if (email || phone) {
+        const identifier = activeLoginTab === 'email' ? email : phone;
+        const usernamePart = identifier.split('@')[0] || 'User';
+        const demoUser = {
+          id: Math.floor(100 + Math.random() * 900),
+          email: activeLoginTab === 'email' ? email : `${phone}@phone.auth`,
+          first_name: usernamePart.charAt(0).toUpperCase() + usernamePart.slice(1),
+          last_name: 'Trader',
+          kyc_status: 'unverified'
+        };
         localStorage.setItem('crm_user', JSON.stringify(demoUser));
         onLoginSuccess(demoUser);
       } else {
