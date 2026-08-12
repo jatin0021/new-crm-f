@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import Navbar from './components/layout/Navbar';
 import Dashboard from './pages/user/Dashboard';
 import AccountsPage from './pages/user/AccountsPage';
@@ -11,23 +11,34 @@ import RegisterPage from './pages/auth/RegisterPage';
 import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
 
 export default function App() {
-  const [currentUser, setCurrentUser] = useState(null);
-  const [authView, setAuthView] = useState('login'); // 'login', 'register', 'forgot-password' or null when logged in
-  const [activeTab, setActiveTab] = useState('Home');
-
-  // Check stored user session on mount
-  useEffect(() => {
-    const storedUser = localStorage.getItem('crm_user');
-    if (storedUser) {
-      try {
-        const parsed = JSON.parse(storedUser);
-        setCurrentUser(parsed);
-        setAuthView(null); // Show main CRM portal
-      } catch (e) {
-        localStorage.removeItem('crm_user');
-      }
+  // Synchronously initialize state from localStorage to prevent auth screen flash on refresh
+  const [currentUser, setCurrentUser] = useState(() => {
+    try {
+      const storedUser = localStorage.getItem('crm_user');
+      return storedUser ? JSON.parse(storedUser) : null;
+    } catch (e) {
+      localStorage.removeItem('crm_user');
+      return null;
     }
-  }, []);
+  });
+
+  const [authView, setAuthView] = useState(() => {
+    try {
+      const storedUser = localStorage.getItem('crm_user');
+      return storedUser ? null : 'login';
+    } catch (e) {
+      return 'login';
+    }
+  });
+
+  const [activeTab, setActiveTabState] = useState(() => {
+    return localStorage.getItem('crm_active_tab') || 'Home';
+  });
+
+  const setActiveTab = (tab) => {
+    setActiveTabState(tab);
+    localStorage.setItem('crm_active_tab', tab);
+  };
 
   const handleLoginSuccess = (user) => {
     setCurrentUser(user);
@@ -38,6 +49,7 @@ export default function App() {
   const handleLogout = () => {
     localStorage.removeItem('crm_jwt_token');
     localStorage.removeItem('crm_user');
+    localStorage.removeItem('crm_active_tab');
     setCurrentUser(null);
     setAuthView('login');
   };
