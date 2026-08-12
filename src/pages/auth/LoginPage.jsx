@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Eye, EyeOff, Mail, Phone, Send, AlertCircle, ArrowRight } from 'lucide-react';
 import AuthLayout from '../../components/auth/AuthLayout';
+import { API_BASE_URL } from '../../config/api';
 
 export default function LoginPage({ onLoginSuccess = () => {}, onNavigate = () => {} }) {
   const [activeLoginTab, setActiveLoginTab] = useState('email'); // 'email' or 'phone'
@@ -17,7 +18,7 @@ export default function LoginPage({ onLoginSuccess = () => {}, onNavigate = () =
     setLoading(true);
 
     try {
-      const response = await fetch('/api/auth/login', {
+      const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -26,14 +27,20 @@ export default function LoginPage({ onLoginSuccess = () => {}, onNavigate = () =
         })
       });
 
-      const data = await response.json();
+      let data = {};
+      const responseText = await response.text();
+      try {
+        data = JSON.parse(responseText);
+      } catch (jsonErr) {
+        throw new Error(`Server connection error (${response.status}). Please check API URL setting.`);
+      }
 
-      if (data.ok && data.data?.token) {
+      if (response.ok && (data.ok || data.success) && data.data?.token) {
         localStorage.setItem('crm_jwt_token', data.data.token);
         localStorage.setItem('crm_user', JSON.stringify(data.data.user));
         onLoginSuccess(data.data.user);
       } else {
-        setErrorMessage(data.message || 'Invalid email or password');
+        setErrorMessage(data.message || data.error || 'Invalid email or password');
       }
     } catch (err) {
       if (email === 'trader@example.com' && password === 'password123') {
@@ -41,7 +48,7 @@ export default function LoginPage({ onLoginSuccess = () => {}, onNavigate = () =
         localStorage.setItem('crm_user', JSON.stringify(demoUser));
         onLoginSuccess(demoUser);
       } else {
-        setErrorMessage('Server connection error. Please ensure backend server is active.');
+        setErrorMessage(err.message || 'Server connection error. Please ensure backend server is active.');
       }
     } finally {
       setLoading(false);

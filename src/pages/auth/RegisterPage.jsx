@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Eye, EyeOff, Mail, User, Globe, Phone, Lock, Tag, AlertCircle } from 'lucide-react';
 import AuthLayout from '../../components/auth/AuthLayout';
+import { API_BASE_URL } from '../../config/api';
 
 export default function RegisterPage({ onRegisterSuccess = () => {}, onNavigate = () => {} }) {
   const [formData, setFormData] = useState({
@@ -49,23 +50,29 @@ export default function RegisterPage({ onRegisterSuccess = () => {}, onNavigate 
     setLoading(true);
 
     try {
-      const response = await fetch('/api/auth/register', {
+      const response = await fetch(`${API_BASE_URL}/api/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)
       });
 
-      const data = await response.json();
+      let data = {};
+      const responseText = await response.text();
+      try {
+        data = JSON.parse(responseText);
+      } catch (jsonErr) {
+        throw new Error(`Server connection error (${response.status}). Please check API URL setting.`);
+      }
 
-      if (data.ok && data.data?.token) {
+      if (response.ok && (data.ok || data.success) && data.data?.token) {
         localStorage.setItem('crm_jwt_token', data.data.token);
         localStorage.setItem('crm_user', JSON.stringify(data.data.user));
         onRegisterSuccess(data.data.user);
       } else {
-        setErrorMessage(data.message || 'Registration failed.');
+        setErrorMessage(data.message || data.error || 'Registration failed.');
       }
     } catch (err) {
-      setErrorMessage('Server connection error.');
+      setErrorMessage(err.message || 'Server connection error.');
     } finally {
       setLoading(false);
     }
