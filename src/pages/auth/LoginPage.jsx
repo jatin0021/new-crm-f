@@ -26,14 +26,20 @@ export default function LoginPage({ onLoginSuccess = () => {}, onNavigate = () =
         })
       });
 
-      const data = await response.json();
+      let data = {};
+      const responseText = await response.text();
+      try {
+        data = JSON.parse(responseText);
+      } catch (jsonErr) {
+        throw new Error(`Server response error (${response.status})`);
+      }
 
-      if (data.ok && data.data?.token) {
+      if (response.ok && (data.ok || data.success) && data.data?.token) {
         localStorage.setItem('crm_jwt_token', data.data.token);
         localStorage.setItem('crm_user', JSON.stringify(data.data.user));
         onLoginSuccess(data.data.user);
       } else {
-        setErrorMessage(data.message || 'Invalid email or password');
+        setErrorMessage(data.message || data.error || 'Invalid email or password');
       }
     } catch (err) {
       if (email === 'trader@example.com' && password === 'password123') {
@@ -41,7 +47,7 @@ export default function LoginPage({ onLoginSuccess = () => {}, onNavigate = () =
         localStorage.setItem('crm_user', JSON.stringify(demoUser));
         onLoginSuccess(demoUser);
       } else {
-        setErrorMessage('Server connection error. Please ensure backend server is active.');
+        setErrorMessage(err.message || 'Server connection error. Please ensure backend server is active.');
       }
     } finally {
       setLoading(false);
