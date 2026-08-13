@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Search, TrendingUp, TrendingDown, Star, ChevronRight } from 'lucide-react';
+import { Search, TrendingUp, TrendingDown, Star, ChevronRight, Activity, Zap } from 'lucide-react';
 
 export default function MarketsWidget({ onTradeSymbol = () => {} }) {
   const [activeCategory, setActiveCategory] = useState('Forex');
   const [searchQuery, setSearchQuery] = useState('');
+  const [lastUpdatedSymbol, setLastUpdatedSymbol] = useState(null);
 
   const categories = ['Forex', 'Crypto', 'Shares', 'Indices', 'Metals', 'Energy', 'ETFs'];
 
@@ -54,6 +55,9 @@ export default function MarketsWidget({ onTradeSymbol = () => {} }) {
         const delta = (Math.random() - 0.49) * (item.bid * 0.001);
         const newBid = +(item.bid + delta).toFixed(item.bid > 100 ? 2 : 4);
         
+        setLastUpdatedSymbol(item.symbol);
+        setTimeout(() => setLastUpdatedSymbol(null), 800);
+
         const updatedItems = [...categoryItems];
         updatedItems[randomIndex] = {
           ...item,
@@ -78,8 +82,13 @@ export default function MarketsWidget({ onTradeSymbol = () => {} }) {
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-          <h3 className="text-slate-900 font-extrabold text-xl tracking-tight">Financial Markets</h3>
-          <p className="text-xs text-slate-500 font-medium mt-0.5">Real-time quotes, spreads & streaming price updates across global asset classes.</p>
+          <div className="flex items-center gap-2">
+            <h3 className="text-slate-900 font-black text-xl tracking-tight">Financial Markets Overview</h3>
+            <span className="flex items-center gap-1 text-[10px] font-black text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200/60 uppercase">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></span> Live Quotes
+            </span>
+          </div>
+          <p className="text-xs text-slate-500 font-medium mt-1">Real-time quotes, spreads & streaming price updates across global asset classes.</p>
         </div>
         
         {/* Search Bar */}
@@ -90,27 +99,26 @@ export default function MarketsWidget({ onTradeSymbol = () => {} }) {
             placeholder="Search symbol (e.g. EURUSD, BTCUSD)..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200/80 rounded-full text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+            className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200/80 rounded-full text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
           />
         </div>
       </div>
 
-      {/* Category Tabs Header */}
-      <div className="flex items-center gap-6 border-b border-slate-100 overflow-x-auto no-scrollbar mb-6 pb-1">
+      {/* Category Segmented Tab Header */}
+      <div className="flex items-center gap-1.5 bg-slate-100/70 p-1.5 rounded-2xl border border-slate-200/60 overflow-x-auto no-scrollbar mb-6">
         {categories.map((cat) => {
           const isActive = activeCategory === cat;
           return (
             <button
               key={cat}
               onClick={() => setActiveCategory(cat)}
-              className={`pb-3 text-xs sm:text-sm font-bold transition-colors relative whitespace-nowrap ${
-                isActive ? 'text-indigo-600 font-extrabold' : 'text-slate-400 hover:text-slate-700'
+              className={`px-4 py-2 text-xs font-extrabold rounded-xl transition-all whitespace-nowrap cursor-pointer ${
+                isActive 
+                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/25 scale-[1.02]' 
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-white/80'
               }`}
             >
               {cat}
-              {isActive && (
-                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600 rounded-full"></span>
-              )}
             </button>
           );
         })}
@@ -120,58 +128,71 @@ export default function MarketsWidget({ onTradeSymbol = () => {} }) {
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse">
           <thead>
-            <tr className="text-slate-400 text-xs font-semibold uppercase tracking-wider border-b border-slate-100 pb-3">
-              <th className="pb-3 font-medium">Instrument</th>
-              <th className="pb-3 font-medium">Bid Price</th>
-              <th className="pb-3 font-medium">Change</th>
-              <th className="pb-3 font-medium">Mini Chart</th>
-              <th className="pb-3 font-medium text-right">24h Performance</th>
+            <tr className="text-slate-400 text-[11px] font-bold uppercase tracking-wider border-b border-slate-100 pb-3">
+              <th className="pb-3 font-semibold pl-2">Instrument</th>
+              <th className="pb-3 font-semibold">Bid Price</th>
+              <th className="pb-3 font-semibold">24h Change</th>
+              <th className="pb-3 font-semibold">Sparkline</th>
+              <th className="pb-3 font-semibold text-right pr-2">Action</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 text-sm">
             {currentInstruments.map((item) => {
               const isPositive = item.percent >= 0;
+              const isUpdated = lastUpdatedSymbol === item.symbol;
               return (
                 <tr 
                   key={item.symbol} 
-                  onClick={() => onTradeSymbol(item.symbol)}
-                  className="hover:bg-slate-50/90 transition-colors group cursor-pointer"
+                  className={`transition-colors group cursor-pointer ${
+                    isUpdated 
+                      ? (isPositive ? 'animate-flash-up bg-emerald-50/50' : 'animate-flash-down bg-rose-50/50')
+                      : 'hover:bg-slate-50/90'
+                  }`}
                 >
                   {/* Symbol & Pair Icons */}
-                  <td className="py-4">
+                  <td className="py-3.5 pl-2" onClick={() => onTradeSymbol(item.symbol)}>
                     <div className="flex items-center gap-3">
-                      <div className="flex items-center -space-x-1 shrink-0 p-1 bg-slate-50 rounded-xl border border-slate-100">
+                      <div className="flex items-center -space-x-1 shrink-0 p-1.5 bg-slate-50 rounded-xl border border-slate-200/60 shadow-xs">
                         <span className="text-lg leading-none">{item.flag1}</span>
                         <span className="text-lg leading-none">{item.flag2}</span>
                       </div>
                       <div>
-                        <p className="font-extrabold text-slate-900 group-hover:text-indigo-600 transition-colors flex items-center gap-1">
+                        <p className="font-extrabold text-slate-900 group-hover:text-emerald-600 transition-colors flex items-center gap-1">
                           {item.symbol}
                         </p>
-                        <p className="text-[11px] text-slate-400 font-medium">{item.name}</p>
+                        <p className="text-[11px] text-slate-400 font-semibold">{item.name}</p>
                       </div>
                     </div>
                   </td>
 
                   {/* Bid Price */}
-                  <td className="py-4 font-extrabold text-slate-900 font-mono">
-                    {item.bid.toLocaleString('en-US', { minimumFractionDigits: item.bid > 100 ? 2 : 4 })}
+                  <td className="py-3.5 font-black text-slate-900 font-mono" onClick={() => onTradeSymbol(item.symbol)}>
+                    <span className="text-sm">
+                      ${item.bid.toLocaleString('en-US', { minimumFractionDigits: item.bid > 100 ? 2 : 4 })}
+                    </span>
                   </td>
 
                   {/* Price Change */}
-                  <td className={`py-4 font-bold font-mono text-xs ${isPositive ? 'text-emerald-600' : 'text-rose-500'}`}>
-                    {isPositive ? `+${item.change}` : item.change}
+                  <td className="py-3.5" onClick={() => onTradeSymbol(item.symbol)}>
+                    <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-black ${
+                      isPositive 
+                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/60' 
+                        : 'bg-rose-50 text-rose-700 border border-rose-200/60'
+                    }`}>
+                      {isPositive ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+                      {isPositive ? `+${item.percent.toFixed(2)}%` : `${item.percent.toFixed(2)}%`}
+                    </span>
                   </td>
 
                   {/* Sparkline Graph SVG */}
-                  <td className="py-4">
+                  <td className="py-3.5" onClick={() => onTradeSymbol(item.symbol)}>
                     <div className="w-24 h-6">
                       <svg className="w-full h-full" viewBox="0 0 100 30">
                         <path
                           d={`M ${item.points.map((p, i) => `${i * 14},${30 - (p / 100) * 25}`).join(' L ')}`}
                           fill="none"
                           stroke={isPositive ? '#10B981' : '#F43F5E'}
-                          strokeWidth="2"
+                          strokeWidth="2.5"
                           strokeLinecap="round"
                           strokeLinejoin="round"
                         />
@@ -179,16 +200,14 @@ export default function MarketsWidget({ onTradeSymbol = () => {} }) {
                     </div>
                   </td>
 
-                  {/* Percentage */}
-                  <td className="py-4 text-right">
-                    <span className={`inline-flex items-center gap-0.5 px-3 py-1 rounded-full text-xs font-extrabold ${
-                      isPositive 
-                        ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' 
-                        : 'bg-rose-50 text-rose-600 border border-rose-100'
-                    }`}>
-                      {isPositive ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-                      {isPositive ? `+${item.percent.toFixed(2)}%` : `${item.percent.toFixed(2)}%`}
-                    </span>
+                  {/* Trade Action Button */}
+                  <td className="py-3.5 text-right pr-2">
+                    <button
+                      onClick={() => onTradeSymbol(item.symbol)}
+                      className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-full transition-all shadow-xs hover:scale-105 active:scale-95 cursor-pointer inline-flex items-center gap-1"
+                    >
+                      <Zap className="w-3 h-3" /> Trade
+                    </button>
                   </td>
                 </tr>
               );
@@ -200,4 +219,5 @@ export default function MarketsWidget({ onTradeSymbol = () => {} }) {
     </div>
   );
 }
+
 

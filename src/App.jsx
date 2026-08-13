@@ -68,7 +68,7 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col font-sans selection:bg-indigo-600 selection:text-white">
+    <div className="min-h-screen bg-slate-50 flex flex-col font-sans selection:bg-emerald-600 selection:text-white">
       
       {/* Top Navbar */}
       <Navbar 
@@ -91,17 +91,17 @@ export default function App() {
         
         {/* Fallbacks for Trade, Copy Trading, V-Wallet, Webinar */}
         {(activeTab === 'Trade' || activeTab === 'Copy Trading' || activeTab === 'V-Wallet' || activeTab === 'Webinar' || activeTab === 'IBProgramme' || activeTab === 'Analysis' || activeTab === 'Support') && (
-          <div className="bg-white rounded-3xl p-8 sm:p-12 text-center border border-slate-200/80 shadow-xs space-y-4 max-w-2xl mx-auto my-8">
-            <div className="w-16 h-16 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto font-black text-xl">
+          <div className="bg-white rounded-3xl p-8 sm:p-12 text-center border border-slate-200/80 card-shadow space-y-4 max-w-2xl mx-auto my-8">
+            <div className="w-16 h-16 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto font-black text-xl border border-emerald-200/60 shadow-xs">
               {activeTab.charAt(0)}
             </div>
             <h2 className="text-2xl font-extrabold text-slate-900">{activeTab} Module</h2>
             <p className="text-xs text-slate-500 max-w-md mx-auto leading-relaxed">
-              You are currently viewing the {activeTab} section of Succeed Capital CRM. All interactive trading components, live execution routing, and account metrics are active.
+              You are currently viewing the {activeTab} section of Vintage CRM. All interactive trading components, live execution routing, and account metrics are active.
             </p>
             <button
               onClick={() => setActiveTab('Home')}
-              className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-full transition-all shadow-xs hover:shadow"
+              className="px-6 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-xs rounded-full transition-all shadow-md shadow-emerald-600/20 hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
             >
               Return to Trader Dashboard
             </button>
