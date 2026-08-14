@@ -17,6 +17,8 @@ import {
   UserX
 } from 'lucide-react';
 
+import { API_BASE_URL } from '../../config/api';
+
 export default function AdminDashboard({ onImpersonate = () => {} }) {
   const [adminTab, setAdminTab] = useState('users');
   const [searchQuery, setSearchQuery] = useState('');
@@ -120,7 +122,7 @@ export default function AdminDashboard({ onImpersonate = () => {} }) {
     setLoadingUsers(true);
     try {
       const token = localStorage.getItem('crm_admin_token');
-      const res = await fetch('/api/admin/users', {
+      const res = await fetch(`${API_BASE_URL}/api/admin/users`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
