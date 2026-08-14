@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Eye, EyeOff, Mail, Phone, Send, AlertCircle, ArrowRight } from 'lucide-react';
+import { Eye, EyeOff, Mail, Phone, Lock, AlertCircle, ArrowRight, User } from 'lucide-react';
 import AuthLayout from '../../components/auth/AuthLayout';
 import { API_BASE_URL } from '../../config/api';
 
@@ -18,13 +18,18 @@ export default function LoginPage({ onLoginSuccess = () => {}, onNavigate = () =
     setLoading(true);
 
     try {
+<<<<<<< HEAD
       const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
+=======
+      const payload = {
+        password,
+        ...(activeLoginTab === 'email' ? { email } : { phone })
+      };
+      const response = await fetch('/api/auth/login', {
+>>>>>>> f53b3b8124753b178419b7cdcbe700730964a0de
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: activeLoginTab === 'email' ? email : `${phone}@phone.auth`,
-          password
-        })
+        body: JSON.stringify(payload)
       });
 
       let data = {};
@@ -32,7 +37,14 @@ export default function LoginPage({ onLoginSuccess = () => {}, onNavigate = () =
       try {
         data = JSON.parse(responseText);
       } catch (jsonErr) {
+<<<<<<< HEAD
         throw new Error(`Server connection error (${response.status}). Please check API URL setting.`);
+=======
+        if (response.status === 502) {
+          throw new Error('Backend server is temporarily unreachable (502 Bad Gateway).');
+        }
+        throw new Error(`Server response error (${response.status})`);
+>>>>>>> f53b3b8124753b178419b7cdcbe700730964a0de
       }
 
       if (response.ok && (data.ok || data.success) && data.data?.token) {
@@ -65,31 +77,27 @@ export default function LoginPage({ onLoginSuccess = () => {}, onNavigate = () =
 
   return (
     <AuthLayout>
-      <div className="space-y-4 text-center">
+      <div className="space-y-5 text-center">
         
-        {/* Centered CRM Brand Icon */}
-        <div className="w-12 h-12 rounded-2xl bg-[#0b485b] text-orange-400 flex items-center justify-center mx-auto shadow-md border border-cyan-500/20 shrink-0">
-          <svg className="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
-          </svg>
-        </div>
-
-        {/* Title & Subtitle */}
-        <div>
-          <h2 className="text-2xl font-black text-slate-900 tracking-tight">
-            Client Portal Login
+        {/* Title & Subtitle Matching Reference */}
+        <div className="space-y-1">
+          <h2 className="text-3xl font-extrabold text-white tracking-tight">
+            Welcome Back
           </h2>
+          <p className="text-xs font-medium text-slate-400">
+            Sign in to continue
+          </p>
         </div>
 
-        {/* Segmented Tab Switcher (Email Address vs Phone Number) */}
-        <div className="bg-slate-100 p-1 rounded-xl flex items-center gap-1 border border-slate-200/80 max-w-sm mx-auto">
+        {/* Tab Switcher (Email Address vs Phone Number) */}
+        <div className="bg-[#021814]/90 p-1 rounded-xl flex items-center gap-1 border border-emerald-500/20 max-w-xs mx-auto">
           <button
             type="button"
             onClick={() => setActiveLoginTab('email')}
-            className={`flex-1 py-2 px-3 text-xs font-extrabold rounded-lg transition-all cursor-pointer ${
+            className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-lg transition-all cursor-pointer ${
               activeLoginTab === 'email'
-                ? 'bg-[#073646] text-white shadow-sm'
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
+                : 'text-slate-400 hover:text-slate-200'
             }`}
           >
             Email Address
@@ -97,118 +105,125 @@ export default function LoginPage({ onLoginSuccess = () => {}, onNavigate = () =
           <button
             type="button"
             onClick={() => setActiveLoginTab('phone')}
-            className={`flex-1 py-2 px-3 text-xs font-extrabold rounded-lg transition-all cursor-pointer ${
+            className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-lg transition-all cursor-pointer ${
               activeLoginTab === 'phone'
-                ? 'bg-[#073646] text-white shadow-sm'
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
+                : 'text-slate-400 hover:text-slate-200'
             }`}
           >
             Phone Number
           </button>
         </div>
 
-        {/* Error Alert Message */}
+        {/* Error Alert */}
         {errorMessage && (
-          <div className="bg-rose-50 border border-rose-200 text-rose-700 px-3.5 py-2.5 rounded-xl text-xs font-semibold flex items-center gap-2 text-left">
-            <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+          <div className="bg-rose-950/60 border border-rose-500/30 text-rose-300 px-3.5 py-2.5 rounded-xl text-xs font-semibold flex items-center gap-2 text-left animate-in fade-in">
+            <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
             <span>{errorMessage}</span>
           </div>
         )}
 
-        {/* Form Inputs */}
-        <form onSubmit={handleSubmit} className="space-y-3.5 text-left">
+        {/* Form Inputs matching reference icon-on-left style */}
+        <form onSubmit={handleSubmit} className="space-y-4 text-left">
           
+          {/* Email / Phone Field */}
           {activeLoginTab === 'email' ? (
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
-                Email <span className="text-orange-500">*</span>
-              </label>
-              <div className="relative">
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Enter your registered email address"
-                  className="w-full pl-4 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all placeholder:text-slate-400 placeholder:font-normal"
-                />
-                <Mail className="w-4 h-4 text-slate-400 absolute right-3.5 top-3" />
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-emerald-400/80">
+                <User className="w-4 h-4" />
               </div>
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Email Address"
+                className="w-full pl-10 pr-4 py-3 bg-[#021814]/70 border-b-2 border-emerald-800/60 focus:border-emerald-400 rounded-t-lg text-xs sm:text-sm font-medium text-white placeholder-slate-400 focus:outline-none transition-all duration-200"
+              />
             </div>
           ) : (
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
-                Phone Number <span className="text-orange-500">*</span>
-              </label>
-              <div className="relative">
-                <input
-                  type="tel"
-                  required
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="+1 (555) 000-0000"
-                  className="w-full pl-4 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all placeholder:text-slate-400 placeholder:font-normal"
-                />
-                <Phone className="w-4 h-4 text-slate-400 absolute right-3.5 top-3" />
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-emerald-400/80">
+                <Phone className="w-4 h-4" />
               </div>
+              <input
+                type="tel"
+                required
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="Phone Number"
+                className="w-full pl-10 pr-4 py-3 bg-[#021814]/70 border-b-2 border-emerald-800/60 focus:border-emerald-400 rounded-t-lg text-xs sm:text-sm font-medium text-white placeholder-slate-400 focus:outline-none transition-all duration-200"
+              />
             </div>
           )}
 
+          {/* Password Field */}
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1">
-              Password <span className="text-orange-500">*</span>
-            </label>
             <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-emerald-400/80">
+                <Lock className="w-4 h-4" />
+              </div>
               <input
                 type={showPassword ? 'text' : 'password'}
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter your password"
-                className="w-full pl-4 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all placeholder:text-slate-400 placeholder:font-normal"
+                placeholder="Password"
+                className="w-full pl-10 pr-10 py-3 bg-[#021814]/70 border-b-2 border-emerald-800/60 focus:border-emerald-400 rounded-t-lg text-xs sm:text-sm font-medium text-white placeholder-slate-400 focus:outline-none transition-all duration-200"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3.5 top-3 text-slate-400 hover:text-slate-600 transition-colors"
+                className="absolute right-3.5 top-3.5 text-slate-400 hover:text-emerald-300 transition-colors cursor-pointer"
               >
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
+
+            {/* Forgot Password Link */}
+            <div className="pt-2 text-left">
+              <button
+                type="button"
+                onClick={() => onNavigate('forgot-password')}
+                className="text-xs font-semibold text-slate-400 hover:text-emerald-400 transition-colors cursor-pointer"
+              >
+                Forgot Password?
+              </button>
+            </div>
           </div>
 
-          {/* Log In Button */}
+          {/* Main Action Pill Button matching reference (Vibrant Emerald Gradient) */}
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 px-6 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-extrabold text-xs sm:text-sm rounded-full shadow-lg shadow-orange-500/25 transition-all hover:scale-[1.01] active:scale-[0.99] disabled:opacity-70 flex items-center justify-center gap-2 cursor-pointer mt-1"
+            className="w-full py-3.5 px-6 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-500 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold text-sm rounded-full shadow-lg shadow-emerald-600/35 transition-all hover:scale-[1.01] active:scale-[0.99] disabled:opacity-70 flex items-center justify-center gap-2 cursor-pointer mt-2"
           >
             {loading ? (
               <span className="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
             ) : (
               <>
-                <span>Log in</span>
-                <ArrowRight className="w-4 h-4" />
+                <span>Sign In</span>
+                <ArrowRight className="w-4.5 h-4.5" />
               </>
             )}
           </button>
         </form>
 
-        {/* Separator - Other Login Method */}
-        <div className="relative my-3">
+        {/* Separator - OR CONTINUE WITH */}
+        <div className="relative my-4">
           <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-slate-200"></div>
+            <div className="w-full border-t border-emerald-950/80"></div>
           </div>
-          <div className="relative flex justify-center text-[10px] uppercase font-bold tracking-wider">
-            <span className="bg-white px-3 text-slate-400">Other Login Method</span>
+          <div className="relative flex justify-center text-[10px] uppercase font-extrabold tracking-wider">
+            <span className="bg-[#03211b] px-3 text-emerald-200/50">OR CONTINUE WITH</span>
           </div>
         </div>
 
-        {/* Google SSO Button */}
+        {/* Google SSO Button matching reference */}
         <button
           type="button"
           onClick={() => alert('Google SSO Authentication gateway initialized')}
-          className="w-full py-2.5 px-4 bg-slate-50 hover:bg-slate-100 text-slate-800 font-bold text-xs sm:text-sm rounded-full transition-all flex items-center justify-center gap-2.5 border border-slate-200 shadow-xs hover:border-slate-300 active:scale-[0.99] cursor-pointer"
+          className="w-full py-3 px-4 bg-slate-200/90 hover:bg-white text-slate-900 font-bold text-xs sm:text-sm rounded-full transition-all flex items-center justify-center gap-2.5 shadow-md active:scale-[0.99] cursor-pointer"
         >
           <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
             <path
@@ -228,31 +243,24 @@ export default function LoginPage({ onLoginSuccess = () => {}, onNavigate = () =
               d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
             />
           </svg>
-          <span>Continue with Google</span>
+          <span>Sign in with Google</span>
         </button>
 
-        {/* Footer Links */}
-        <div className="pt-1 space-y-2 text-center">
-          <div>
-            <button
-              onClick={() => onNavigate('forgot-password')}
-              className="text-xs sm:text-sm font-extrabold text-orange-600 hover:text-orange-700 underline decoration-orange-300 transition-colors cursor-pointer"
-            >
-              Forgot Password?
-            </button>
-          </div>
-
-          <div className="text-xs sm:text-sm font-bold text-slate-600">
+        {/* Footer Link matching reference: Don't have an account? Sign Up */}
+        <div className="pt-2 text-center">
+          <p className="text-xs font-semibold text-slate-400">
+            Don't have an account?{' '}
             <button
               onClick={() => onNavigate('register')}
-              className="text-orange-600 hover:text-orange-700 font-extrabold underline decoration-orange-300 transition-colors cursor-pointer"
+              className="text-emerald-400 hover:text-emerald-300 font-extrabold transition-colors cursor-pointer ml-1"
             >
-              Not A Client? Open Live Account
+              Sign Up
             </button>
-          </div>
+          </p>
         </div>
 
       </div>
     </AuthLayout>
   );
 }
+

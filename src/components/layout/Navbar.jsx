@@ -50,7 +50,7 @@ export default function Navbar({ activeTab = 'Home', setActiveTab = () => {}, cu
   ];
 
   return (
-    <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/80 shadow-xs">
+    <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-xl border-b border-slate-200/70 shadow-xs transition-all">
       {/* Full-width header container with fluid edge-to-edge padding */}
       <div className="w-full px-3.5 sm:px-6 lg:px-8 xl:px-10">
         <div className="flex items-center justify-between h-16 gap-2 sm:gap-4">
@@ -60,42 +60,44 @@ export default function Navbar({ activeTab = 'Home', setActiveTab = () => {}, cu
             {/* Logo */}
             <div 
               onClick={() => { setActiveTab('Home'); setShowMobileMenu(false); }} 
-              className="flex items-center gap-2 cursor-pointer group shrink-0 select-none"
+              className="flex items-center gap-2.5 cursor-pointer group shrink-0 select-none"
             >
-              <div className="w-8.5 h-8.5 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-br from-indigo-600 via-indigo-700 to-indigo-900 flex items-center justify-center text-white font-extrabold shadow-sm group-hover:scale-105 transition-all duration-200 relative overflow-hidden">
-                <span className="text-lg sm:text-xl tracking-tighter font-serif italic">S</span>
-                <span className="absolute bottom-1 right-1 w-1.5 h-1.5 bg-emerald-400 rounded-full animate-ping"></span>
-                <span className="absolute bottom-1 right-1 w-1.5 h-1.5 bg-emerald-400 rounded-full"></span>
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-gradient-to-tr from-emerald-600 via-teal-600 to-cyan-500 p-[2px] shadow-md shadow-emerald-600/20 group-hover:scale-105 transition-all duration-200 relative overflow-hidden">
+                <div className="w-full h-full bg-slate-950 rounded-[14px] flex items-center justify-center relative">
+                  <span className="text-xl sm:text-2xl tracking-tighter font-serif italic font-black text-transparent bg-clip-text bg-gradient-to-tr from-emerald-400 to-cyan-300">V</span>
+                  <span className="absolute bottom-1 right-1 w-1.5 h-1.5 bg-emerald-400 rounded-full animate-ping"></span>
+                  <span className="absolute bottom-1 right-1 w-1.5 h-1.5 bg-emerald-400 rounded-full"></span>
+                </div>
               </div>
               <div className="flex flex-col">
-                <span className="font-extrabold text-base sm:text-lg lg:text-xl tracking-tight text-slate-900 group-hover:text-indigo-600 transition-colors flex items-center gap-1 leading-none">
-                  Succeed<span className="text-indigo-600 font-semibold">CRM</span>
+                <span className="font-black text-base sm:text-lg lg:text-xl tracking-tight text-slate-900 group-hover:text-emerald-600 transition-colors flex items-center gap-1 leading-none">
+                  Vintage<span className="text-emerald-600 font-extrabold">CRM</span>
                 </span>
-                <span className="text-[8px] sm:text-[9px] uppercase tracking-widest text-slate-400 font-semibold leading-none mt-0.5">
-                  Capital Broker
+                <span className="text-[8px] sm:text-[9px] uppercase tracking-widest text-slate-400 font-bold leading-none mt-0.5">
+                  Institutional Portal
                 </span>
               </div>
             </div>
 
-            {/* Desktop Nav Links */}
-            <nav className="hidden lg:flex items-center gap-1">
+            {/* Desktop Nav Links (Segmented Bar Design) */}
+            <nav className="hidden lg:flex items-center gap-1 bg-slate-100/70 p-1 rounded-full border border-slate-200/60">
               {navItems.map((item) => {
                 const isActive = activeTab === item.id;
                 return (
                   <button
                     key={item.id}
                     onClick={() => setActiveTab(item.id)}
-                    className={`relative px-3.5 py-2 text-xs font-bold rounded-full transition-all duration-150 inline-flex items-center justify-center gap-1.5 leading-none select-none cursor-pointer ${
+                    className={`relative px-3.5 py-1.5 text-xs font-bold rounded-full transition-all duration-200 inline-flex items-center justify-center gap-1.5 leading-none select-none cursor-pointer ${
                       isActive 
-                        ? 'bg-indigo-600 text-white shadow-xs' 
-                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70'
+                        ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/25 scale-[1.02]' 
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-white/80'
                     }`}
                   >
                     <span>{item.label}</span>
                     {item.isNew && (
-                      <span className={`px-1.5 py-0.5 text-[9px] font-extrabold rounded-full leading-none tracking-wider uppercase inline-flex items-center justify-center ${
+                      <span className={`px-1.5 py-0.5 text-[8px] font-black rounded-full leading-none tracking-wider uppercase inline-flex items-center justify-center ${
                         isActive 
-                          ? 'bg-amber-400 text-slate-950 font-black' 
+                          ? 'bg-cyan-300 text-emerald-950 font-black' 
                           : 'bg-emerald-500 text-white animate-pulse-subtle'
                       }`}>
                         NEW
@@ -109,10 +111,10 @@ export default function Navbar({ activeTab = 'Home', setActiveTab = () => {}, cu
               <div className="relative">
                 <button
                   onClick={() => setShowMoreMenu(!showMoreMenu)}
-                  className="p-2 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-full transition-colors inline-flex items-center justify-center cursor-pointer"
+                  className="p-1.5 text-slate-500 hover:text-slate-900 hover:bg-white rounded-full transition-colors inline-flex items-center justify-center cursor-pointer"
                   title="More Navigation Options"
                 >
-                  <MoreHorizontal className="w-5 h-5" />
+                  <MoreHorizontal className="w-4.5 h-4.5" />
                 </button>
 
                 {showMoreMenu && (
@@ -124,21 +126,21 @@ export default function Navbar({ activeTab = 'Home', setActiveTab = () => {}, cu
                       onClick={() => { setActiveTab('IBProgramme'); setShowMoreMenu(false); }}
                       className="w-full px-4 py-2.5 text-left text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2.5 cursor-pointer"
                     >
-                      <Users className="w-4 h-4 text-indigo-500" />
+                      <Users className="w-4 h-4 text-emerald-600" />
                       IB Affiliate Partner
                     </button>
                     <button 
                       onClick={() => { setActiveTab('Analysis'); setShowMoreMenu(false); }}
                       className="w-full px-4 py-2.5 text-left text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2.5 cursor-pointer"
                     >
-                      <TrendingUp className="w-4 h-4 text-emerald-500" />
+                      <TrendingUp className="w-4 h-4 text-teal-600" />
                       Market Analysis & News
                     </button>
                     <button 
                       onClick={() => { setActiveTab('Support'); setShowMoreMenu(false); }}
                       className="w-full px-4 py-2.5 text-left text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2.5 cursor-pointer"
                     >
-                      <HelpCircle className="w-4 h-4 text-amber-500" />
+                      <HelpCircle className="w-4 h-4 text-cyan-600" />
                       Help & Support Center
                     </button>
                   </div>
@@ -153,9 +155,9 @@ export default function Navbar({ activeTab = 'Home', setActiveTab = () => {}, cu
             {/* Wallet Balance Display Button (Desktop) */}
             <button 
               onClick={() => setActiveTab('Funds')}
-              className="hidden md:inline-flex items-center gap-2 px-3 py-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 rounded-full text-xs font-bold text-slate-800 transition-all hover:border-slate-300 cursor-pointer"
+              className="hidden md:inline-flex items-center gap-2 px-3.5 py-1.5 bg-slate-100/80 hover:bg-emerald-50/80 border border-slate-200/80 hover:border-emerald-300 rounded-full text-xs font-bold text-slate-800 transition-all cursor-pointer shadow-xs"
             >
-              <div className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center font-extrabold text-[11px]">
+              <div className="w-5 h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center font-extrabold text-[11px] shadow-xs">
                 $
               </div>
               <span>$0.00 <span className="text-[10px] text-slate-400 font-mono font-medium">USD</span></span>
@@ -164,16 +166,16 @@ export default function Navbar({ activeTab = 'Home', setActiveTab = () => {}, cu
             {/* Deposit Pill CTA (Visible on Mobile & Desktop) */}
             <button 
               onClick={() => setActiveTab('Funds')}
-              className="px-3 sm:px-4 py-1.5 sm:py-2 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white text-xs font-bold rounded-full transition-all shadow-xs hover:shadow active:scale-95 flex items-center gap-1.5 cursor-pointer shrink-0"
+              className="px-3.5 sm:px-4.5 py-1.5 sm:py-2 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-700 hover:to-teal-700 text-white text-xs font-extrabold rounded-full transition-all shadow-md shadow-emerald-600/25 hover:scale-[1.02] active:scale-95 flex items-center gap-1.5 cursor-pointer shrink-0"
             >
               <Wallet className="w-3.5 h-3.5" />
               <span>Deposit</span>
             </button>
 
             {/* Bonus / Rewards Icon (Desktop) */}
-            <button className="hidden sm:flex p-2 text-slate-600 hover:text-amber-600 hover:bg-slate-100 rounded-full transition-colors relative cursor-pointer" title="Promotions & Bonuses">
+            <button className="hidden sm:flex p-2 text-slate-600 hover:text-emerald-600 hover:bg-slate-100 rounded-full transition-colors relative cursor-pointer" title="Promotions & Bonuses">
               <Gift className="w-5 h-5" />
-              <span className="absolute top-1 right-1 w-2 h-2 bg-amber-500 rounded-full ring-2 ring-white"></span>
+              <span className="absolute top-1 right-1 w-2 h-2 bg-teal-500 rounded-full ring-2 ring-white"></span>
             </button>
 
             {/* Bell Notifications (Desktop) */}
@@ -202,7 +204,7 @@ export default function Navbar({ activeTab = 'Home', setActiveTab = () => {}, cu
                       key={lang.code}
                       onClick={() => { setSelectedLang(lang.code); setShowLangMenu(false); }}
                       className={`w-full px-3.5 py-1.5 text-left text-xs font-medium flex items-center justify-between cursor-pointer ${
-                        selectedLang === lang.code ? 'text-indigo-600 bg-indigo-50 font-bold' : 'text-slate-700 hover:bg-slate-50'
+                        selectedLang === lang.code ? 'text-emerald-600 bg-emerald-50 font-bold' : 'text-slate-700 hover:bg-slate-50'
                       }`}
                     >
                       <span>{lang.name}</span>
@@ -213,15 +215,15 @@ export default function Navbar({ activeTab = 'Home', setActiveTab = () => {}, cu
               )}
             </div>
 
-            {/* Profile Icon ONLY (Visible on Mobile & Desktop - Name and Chevron removed) */}
+            {/* Profile Icon ONLY */}
             <div className="relative shrink-0">
               <button 
                 onClick={() => setShowUserMenu(!showUserMenu)}
-                className="p-0.5 hover:ring-2 ring-orange-500/30 rounded-full transition-all cursor-pointer select-none"
+                className="p-0.5 hover:ring-2 ring-emerald-500/30 rounded-full transition-all cursor-pointer select-none"
                 title="User Profile & Settings"
               >
                 {/* Avatar badge with online status indicator */}
-                <div className="relative w-8.5 h-8.5 rounded-full bg-gradient-to-tr from-amber-500 via-orange-500 to-indigo-600 p-0.5 shadow-xs shrink-0">
+                <div className="relative w-8.5 h-8.5 rounded-full bg-gradient-to-tr from-emerald-500 via-teal-500 to-cyan-600 p-0.5 shadow-xs shrink-0">
                   <div className="w-full h-full rounded-full bg-slate-900 flex items-center justify-center text-white font-extrabold text-xs overflow-hidden">
                     {currentUser?.first_name ? currentUser.first_name.charAt(0).toUpperCase() : 'T'}
                   </div>
@@ -241,7 +243,7 @@ export default function Navbar({ activeTab = 'Home', setActiveTab = () => {}, cu
                   >
                     <div className="flex items-center gap-3 min-w-0">
                       {/* Avatar */}
-                      <div className="w-11 h-11 rounded-full bg-gradient-to-tr from-amber-500 via-orange-500 to-indigo-600 p-0.5 shadow-md shrink-0">
+                      <div className="w-11 h-11 rounded-full bg-gradient-to-tr from-emerald-500 via-teal-500 to-cyan-600 p-0.5 shadow-md shrink-0">
                         <div className="w-full h-full rounded-full bg-slate-900 flex items-center justify-center text-white font-extrabold text-sm">
                           {currentUser?.first_name ? currentUser.first_name.charAt(0).toUpperCase() : 'T'}
                         </div>
@@ -249,7 +251,7 @@ export default function Navbar({ activeTab = 'Home', setActiveTab = () => {}, cu
                       
                       {/* User Info & UID */}
                       <div className="min-w-0 flex-1">
-                        <h4 className="text-xs sm:text-sm font-extrabold text-slate-900 truncate group-hover:text-orange-600 transition-colors">
+                        <h4 className="text-xs sm:text-sm font-extrabold text-slate-900 truncate group-hover:text-emerald-600 transition-colors">
                           {currentUser?.first_name ? `${currentUser.first_name} ${currentUser.last_name || ''}` : (currentUser?.email ? currentUser.email.split('@')[0] : 'Trader User')}
                         </h4>
                         
@@ -277,7 +279,7 @@ export default function Navbar({ activeTab = 'Home', setActiveTab = () => {}, cu
                     </div>
 
                     {/* Navigation Arrow */}
-                    <div className="w-7 h-7 rounded-full bg-slate-100 group-hover:bg-orange-50 group-hover:text-orange-600 text-slate-400 flex items-center justify-center transition-all shrink-0">
+                    <div className="w-7 h-7 rounded-full bg-slate-100 group-hover:bg-emerald-50 group-hover:text-emerald-600 text-slate-400 flex items-center justify-center transition-all shrink-0">
                       <ChevronRight className="w-4 h-4" />
                     </div>
                   </div>
@@ -296,7 +298,7 @@ export default function Navbar({ activeTab = 'Home', setActiveTab = () => {}, cu
                       }}
                       className="w-full px-3 py-2.5 rounded-2xl hover:bg-slate-50 transition-all flex items-center gap-3 group text-left cursor-pointer"
                     >
-                      <div className="w-8 h-8 rounded-xl bg-orange-500/10 text-orange-600 flex items-center justify-center shrink-0 group-hover:bg-orange-500 group-hover:text-white transition-all shadow-xs">
+                      <div className="w-8 h-8 rounded-xl bg-teal-500/10 text-teal-600 flex items-center justify-center shrink-0 group-hover:bg-teal-600 group-hover:text-white transition-all shadow-xs">
                         <Download className="w-4 h-4" />
                       </div>
                       <div className="flex-1">
@@ -326,7 +328,7 @@ export default function Navbar({ activeTab = 'Home', setActiveTab = () => {}, cu
                             Profile & Identity Status
                           </span>
                         </div>
-                        <span className="text-[10px] bg-amber-100 text-amber-800 font-bold px-2 py-0.5 rounded-full">
+                        <span className="text-[10px] bg-teal-100 text-teal-800 font-bold px-2 py-0.5 rounded-full">
                           Pending
                         </span>
                       </div>
@@ -337,7 +339,7 @@ export default function Navbar({ activeTab = 'Home', setActiveTab = () => {}, cu
                       onClick={() => { setActiveTab('Accounts'); setShowUserMenu(false); }}
                       className="w-full px-3 py-2.5 rounded-2xl hover:bg-slate-50 transition-all flex items-center gap-3 group text-left cursor-pointer"
                     >
-                      <div className="w-8 h-8 rounded-xl bg-indigo-500/10 text-indigo-600 flex items-center justify-center shrink-0 group-hover:bg-indigo-600 group-hover:text-white transition-all shadow-xs">
+                      <div className="w-8 h-8 rounded-xl bg-cyan-500/10 text-cyan-600 flex items-center justify-center shrink-0 group-hover:bg-cyan-600 group-hover:text-white transition-all shadow-xs">
                         <Key className="w-4 h-4" />
                       </div>
                       <div className="flex-1">
@@ -350,23 +352,6 @@ export default function Navbar({ activeTab = 'Home', setActiveTab = () => {}, cu
                       </div>
                     </button>
 
-                    {/* Admin Portal (Backoffice) */}
-                    <button
-                      onClick={() => { setActiveTab('Admin'); setShowUserMenu(false); }}
-                      className="w-full px-3 py-2.5 rounded-2xl hover:bg-slate-50 transition-all flex items-center gap-3 group text-left cursor-pointer"
-                    >
-                      <div className="w-8 h-8 rounded-xl bg-purple-500/10 text-purple-600 flex items-center justify-center shrink-0 group-hover:bg-purple-600 group-hover:text-white transition-all shadow-xs">
-                        <ArrowUpRight className="w-4 h-4" />
-                      </div>
-                      <div className="flex-1">
-                        <span className="block text-xs font-bold text-slate-800 group-hover:text-slate-900">
-                          Admin Portal
-                        </span>
-                        <span className="block text-[10px] text-slate-400 font-medium">
-                          Back-office Management
-                        </span>
-                      </div>
-                    </button>
 
                     {/* Logout */}
                     <button
@@ -391,7 +376,7 @@ export default function Navbar({ activeTab = 'Home', setActiveTab = () => {}, cu
               )}
             </div>
 
-            {/* Mobile Hamburger Menu Icon (On Right Side for Mobile) */}
+            {/* Mobile Hamburger Menu Icon */}
             <button 
               onClick={() => setShowMobileMenu(!showMobileMenu)}
               className="lg:hidden p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer shrink-0"
@@ -438,13 +423,13 @@ export default function Navbar({ activeTab = 'Home', setActiveTab = () => {}, cu
                   key={item.id}
                   onClick={() => { setActiveTab(item.id); setShowMobileMenu(false); }}
                   className={`w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-bold flex items-center justify-between transition-colors cursor-pointer ${
-                    isActive ? 'bg-indigo-600 text-white shadow-xs' : 'text-slate-700 hover:bg-slate-50'
+                    isActive ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-700 hover:bg-slate-50'
                   }`}
                 >
                   <span>{item.label}</span>
                   {item.isNew && (
                     <span className={`px-2 py-0.5 text-[9px] font-extrabold rounded-full ${
-                      isActive ? 'bg-amber-400 text-slate-950' : 'bg-emerald-500 text-white'
+                      isActive ? 'bg-cyan-300 text-emerald-950' : 'bg-emerald-500 text-white'
                     }`}>
                       NEW
                     </span>
@@ -461,19 +446,19 @@ export default function Navbar({ activeTab = 'Home', setActiveTab = () => {}, cu
               onClick={() => { setActiveTab('IBProgramme'); setShowMobileMenu(false); }}
               className="w-full text-left px-3.5 py-2 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-50 flex items-center gap-2.5 cursor-pointer"
             >
-              <Users className="w-4 h-4 text-indigo-500" /> IB Affiliate Partner
+              <Users className="w-4 h-4 text-emerald-600" /> IB Affiliate Partner
             </button>
             <button 
               onClick={() => { setActiveTab('Analysis'); setShowMobileMenu(false); }}
               className="w-full text-left px-3.5 py-2 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-50 flex items-center gap-2.5 cursor-pointer"
             >
-              <TrendingUp className="w-4 h-4 text-emerald-500" /> Market Analysis & News
+              <TrendingUp className="w-4 h-4 text-teal-600" /> Market Analysis & News
             </button>
             <button 
               onClick={() => { setActiveTab('Support'); setShowMobileMenu(false); }}
               className="w-full text-left px-3.5 py-2 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-50 flex items-center gap-2.5 cursor-pointer"
             >
-              <HelpCircle className="w-4 h-4 text-amber-500" /> Help & Support
+              <HelpCircle className="w-4 h-4 text-cyan-600" /> Help & Support
             </button>
           </div>
 
@@ -486,7 +471,7 @@ export default function Navbar({ activeTab = 'Home', setActiveTab = () => {}, cu
                   key={lang.code}
                   onClick={() => { setSelectedLang(lang.code); setShowMobileMenu(false); }}
                   className={`py-1.5 px-2 rounded-xl text-xs font-bold text-center transition-colors cursor-pointer ${
-                    selectedLang === lang.code ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                    selectedLang === lang.code ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                   }`}
                 >
                   {lang.name}
