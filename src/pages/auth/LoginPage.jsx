@@ -18,15 +18,11 @@ export default function LoginPage({ onLoginSuccess = () => {}, onNavigate = () =
     setLoading(true);
 
     try {
-<<<<<<< HEAD
-      const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
-=======
       const payload = {
         password,
         ...(activeLoginTab === 'email' ? { email } : { phone })
       };
       const response = await fetch('/api/auth/login', {
->>>>>>> f53b3b8124753b178419b7cdcbe700730964a0de
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -37,14 +33,10 @@ export default function LoginPage({ onLoginSuccess = () => {}, onNavigate = () =
       try {
         data = JSON.parse(responseText);
       } catch (jsonErr) {
-<<<<<<< HEAD
-        throw new Error(`Server connection error (${response.status}). Please check API URL setting.`);
-=======
         if (response.status === 502) {
           throw new Error('Backend server is temporarily unreachable (502 Bad Gateway).');
         }
         throw new Error(`Server response error (${response.status})`);
->>>>>>> f53b3b8124753b178419b7cdcbe700730964a0de
       }
 
       if (response.ok && (data.ok || data.success) && data.data?.token) {

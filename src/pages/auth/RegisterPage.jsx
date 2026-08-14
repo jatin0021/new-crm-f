@@ -50,7 +50,7 @@ export default function RegisterPage({ onRegisterSuccess = () => {}, onNavigate 
     setLoading(true);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/auth/register`, {
+      const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)
@@ -61,14 +61,10 @@ export default function RegisterPage({ onRegisterSuccess = () => {}, onNavigate 
       try {
         data = JSON.parse(responseText);
       } catch (jsonErr) {
-<<<<<<< HEAD
-        throw new Error(`Server connection error (${response.status}). Please check API URL setting.`);
-=======
         if (response.status === 502) {
           throw new Error('Backend server is temporarily unreachable (502 Bad Gateway). Please ensure server is active.');
         }
         throw new Error(`Server error (${response.status})`);
->>>>>>> f53b3b8124753b178419b7cdcbe700730964a0de
       }
 
       if (response.ok && (data.ok || data.success) && data.data?.token) {
