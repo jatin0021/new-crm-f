@@ -60,7 +60,10 @@ export default function RegisterPage({ onRegisterSuccess = () => {}, onNavigate 
       try {
         data = JSON.parse(responseText);
       } catch (jsonErr) {
-        throw new Error(`Server response error (${response.status})`);
+        if (response.status === 502) {
+          throw new Error('Backend server is temporarily unreachable (502 Bad Gateway). Please ensure server is active.');
+        }
+        throw new Error(`Server error (${response.status})`);
       }
 
       if (response.ok && (data.ok || data.success) && data.data?.token) {

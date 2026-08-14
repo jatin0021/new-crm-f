@@ -352,23 +352,6 @@ export default function Navbar({ activeTab = 'Home', setActiveTab = () => {}, cu
                       </div>
                     </button>
 
-                    {/* Admin Portal (Backoffice) */}
-                    <button
-                      onClick={() => { setActiveTab('Admin'); setShowUserMenu(false); }}
-                      className="w-full px-3 py-2.5 rounded-2xl hover:bg-slate-50 transition-all flex items-center gap-3 group text-left cursor-pointer"
-                    >
-                      <div className="w-8 h-8 rounded-xl bg-emerald-700/10 text-emerald-700 flex items-center justify-center shrink-0 group-hover:bg-emerald-700 group-hover:text-white transition-all shadow-xs">
-                        <ArrowUpRight className="w-4 h-4" />
-                      </div>
-                      <div className="flex-1">
-                        <span className="block text-xs font-bold text-slate-800 group-hover:text-slate-900">
-                          Admin Portal
-                        </span>
-                        <span className="block text-[10px] text-slate-400 font-medium">
-                          Back-office Management
-                        </span>
-                      </div>
-                    </button>
 
                     {/* Logout */}
                     <button
