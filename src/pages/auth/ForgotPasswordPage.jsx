@@ -1,9 +1,12 @@
 import React, { useState } from 'react';
 import { Mail, Lock, Eye, EyeOff, ArrowLeft, CheckCircle2, AlertCircle, ArrowRight, KeyRound } from 'lucide-react';
 import AuthLayout from '../../components/auth/AuthLayout';
+import { API_BASE_URL } from '../../config/api';
 
 export default function ForgotPasswordPage({ onNavigate = () => {} }) {
   const [email, setEmail] = useState('');
+  const [token, setToken] = useState('');
+  const [devToken, setDevToken] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -20,7 +23,7 @@ export default function ForgotPasswordPage({ onNavigate = () => {} }) {
     setLoading(true);
 
     try {
-      const response = await fetch('/api/auth/forgot-password', {
+      const response = await fetch(`${API_BASE_URL}/api/auth/forgot-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email })
@@ -64,7 +67,7 @@ export default function ForgotPasswordPage({ onNavigate = () => {} }) {
     setLoading(true);
 
     try {
-      const response = await fetch('/api/auth/reset-password', {
+      const response = await fetch(`${API_BASE_URL}/api/auth/reset-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

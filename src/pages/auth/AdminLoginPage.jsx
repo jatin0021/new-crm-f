@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Eye, EyeOff, ShieldCheck, Lock, Mail, AlertCircle, ArrowRight, ArrowLeft } from 'lucide-react';
 import AuthLayout from '../../components/auth/AuthLayout';
+import { API_BASE_URL } from '../../config/api';
 
 export default function AdminLoginPage({ onAdminLoginSuccess = () => {}, onNavigateTrader = () => {} }) {
   const [email, setEmail] = useState('admin@vintagecrm.com');
@@ -15,7 +16,7 @@ export default function AdminLoginPage({ onAdminLoginSuccess = () => {}, onNavig
     setLoading(true);
 
     try {
-      const response = await fetch('/api/admin/login', {
+      const response = await fetch(`${API_BASE_URL}/api/admin/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })

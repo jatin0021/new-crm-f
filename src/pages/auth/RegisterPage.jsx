@@ -50,7 +50,7 @@ export default function RegisterPage({ onRegisterSuccess = () => {}, onNavigate 
     setLoading(true);
 
     try {
-      const response = await fetch('/api/auth/register', {
+      const response = await fetch(`${API_BASE_URL}/api/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)
