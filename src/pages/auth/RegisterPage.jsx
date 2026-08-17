@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import { Eye, EyeOff, Mail, User, Globe, Phone, Lock, Tag, AlertCircle, ArrowRight } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Eye, EyeOff, Mail, User, Globe, Phone, Lock, Tag, AlertCircle, ArrowRight, Check, Sparkles } from 'lucide-react';
 import AuthLayout from '../../components/auth/AuthLayout';
+import PasswordStrengthBar from '../../components/common/PasswordStrengthBar';
 
 export default function RegisterPage({ onRegisterSuccess = () => {}, onNavigate = () => {} }) {
   const [formData, setFormData] = useState({
@@ -16,13 +17,41 @@ export default function RegisterPage({ onRegisterSuccess = () => {}, onNavigate 
   });
 
   const [showPassword, setShowPassword] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [detectedRef, setDetectedRef] = useState(false);
 
   const countries = [
     'United States', 'United Kingdom', 'Germany', 'United Arab Emirates',
     'Canada', 'Australia', 'Singapore', 'France', 'Saudi Arabia', 'Japan', 'India'
   ];
+
+  // 1. Referral Link Detection on Mount
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const refCode = urlParams.get('ref') || urlParams.get('referral') || urlParams.get('ib') || urlParams.get('partner');
+    
+    if (refCode) {
+      const cleanRef = refCode.trim().toUpperCase();
+      localStorage.setItem('crm_referral_code', cleanRef);
+      setFormData(prev => ({ ...prev, referral_code: cleanRef }));
+      setDetectedRef(true);
+    } else {
+      const storedRef = localStorage.getItem('crm_referral_code');
+      if (storedRef) {
+        setFormData(prev => ({ ...prev, referral_code: storedRef }));
+        setDetectedRef(true);
+      }
+    }
+  }, []);
+
+  // Real-time Field Validations
+  const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim());
+  const isFirstNameValid = formData.first_name.trim().length >= 2;
+  const isLastNameValid = formData.last_name.trim().length >= 2;
+  const isPhoneValid = !formData.phone || formData.phone.trim().length >= 6;
+  const isPasswordMatch = formData.password && formData.password === formData.confirm_password;
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -36,7 +65,22 @@ export default function RegisterPage({ onRegisterSuccess = () => {}, onNavigate 
     e.preventDefault();
     setErrorMessage('');
 
-    if (formData.password !== formData.confirm_password) {
+    if (!isFirstNameValid || !isLastNameValid) {
+      setErrorMessage('Please enter a valid first and last name (minimum 2 characters)');
+      return;
+    }
+
+    if (!isEmailValid) {
+      setErrorMessage('Please enter a valid email address');
+      return;
+    }
+
+    if (formData.password.length < 8) {
+      setErrorMessage('Password must be at least 8 characters long');
+      return;
+    }
+
+    if (!isPasswordMatch) {
       setErrorMessage('Passwords do not match');
       return;
     }
@@ -49,10 +93,15 @@ export default function RegisterPage({ onRegisterSuccess = () => {}, onNavigate 
     setLoading(true);
 
     try {
+      const payload = {
+        ...formData,
+        turnstile_token: turnstileToken
+      };
+
       const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(payload)
       });
 
       let data = {};
@@ -94,9 +143,20 @@ export default function RegisterPage({ onRegisterSuccess = () => {}, onNavigate 
           </p>
         </div>
 
+        {/* Affiliate / Partner Referral Link Detection Banner */}
+        {detectedRef && formData.referral_code && (
+          <div className="bg-gradient-to-r from-emerald-950/80 to-teal-950/80 border border-emerald-500/30 p-2.5 rounded-xl text-xs text-emerald-300 flex items-center justify-between animate-in fade-in">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-emerald-400 shrink-0" />
+              <span>Partner Link Active: Referred by <strong className="text-white uppercase font-black">{formData.referral_code}</strong></span>
+            </div>
+            <span className="text-[10px] uppercase bg-emerald-500/20 px-2 py-0.5 rounded font-black text-emerald-300">Auto-Applied</span>
+          </div>
+        )}
+
         {/* Error Alert */}
         {errorMessage && (
-          <div className="bg-rose-950/60 border border-rose-500/30 text-rose-300 px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 text-left animate-in fade-in">
+          <div className="bg-rose-950/60 border border-rose-500/30 text-rose-300 px-3.5 py-2.5 rounded-xl text-xs font-semibold flex items-center gap-2 text-left animate-in fade-in">
             <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
             <span>{errorMessage}</span>
           </div>
@@ -105,7 +165,7 @@ export default function RegisterPage({ onRegisterSuccess = () => {}, onNavigate 
         {/* Form Inputs Grid */}
         <form onSubmit={handleSubmit} className="space-y-3.5 text-left">
           
-          {/* Row 1: First Name & Last Name */}
+          {/* Row 1: First Name & Last Name with Real-Time Validation */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-emerald-400/80">
@@ -118,8 +178,15 @@ export default function RegisterPage({ onRegisterSuccess = () => {}, onNavigate 
                 value={formData.first_name}
                 onChange={handleChange}
                 placeholder="First Name *"
-                className="w-full pl-9 pr-3 py-2.5 bg-[#021814]/70 border-b-2 border-emerald-800/60 focus:border-emerald-400 rounded-t-lg text-xs sm:text-sm font-medium text-white placeholder-slate-400 focus:outline-none transition-all"
+                className={`w-full pl-9 pr-8 py-2.5 bg-[#021814]/70 border-b-2 ${
+                  formData.first_name ? (isFirstNameValid ? 'border-emerald-400' : 'border-rose-500') : 'border-emerald-800/60'
+                } focus:border-emerald-400 rounded-t-lg text-xs sm:text-sm font-medium text-white placeholder-slate-400 focus:outline-none transition-all`}
               />
+              {formData.first_name && (
+                <div className="absolute right-2.5 top-3">
+                  {isFirstNameValid ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <AlertCircle className="w-3.5 h-3.5 text-rose-400" />}
+                </div>
+              )}
             </div>
 
             <div className="relative">
@@ -133,12 +200,19 @@ export default function RegisterPage({ onRegisterSuccess = () => {}, onNavigate 
                 value={formData.last_name}
                 onChange={handleChange}
                 placeholder="Last Name *"
-                className="w-full pl-9 pr-3 py-2.5 bg-[#021814]/70 border-b-2 border-emerald-800/60 focus:border-emerald-400 rounded-t-lg text-xs sm:text-sm font-medium text-white placeholder-slate-400 focus:outline-none transition-all"
+                className={`w-full pl-9 pr-8 py-2.5 bg-[#021814]/70 border-b-2 ${
+                  formData.last_name ? (isLastNameValid ? 'border-emerald-400' : 'border-rose-500') : 'border-emerald-800/60'
+                } focus:border-emerald-400 rounded-t-lg text-xs sm:text-sm font-medium text-white placeholder-slate-400 focus:outline-none transition-all`}
               />
+              {formData.last_name && (
+                <div className="absolute right-2.5 top-3">
+                  {isLastNameValid ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <AlertCircle className="w-3.5 h-3.5 text-rose-400" />}
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Row 2: Email & Phone */}
+          {/* Row 2: Email & Phone with Real-Time Validation */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-emerald-400/80">
@@ -151,8 +225,15 @@ export default function RegisterPage({ onRegisterSuccess = () => {}, onNavigate 
                 value={formData.email}
                 onChange={handleChange}
                 placeholder="Email Address *"
-                className="w-full pl-9 pr-3 py-2.5 bg-[#021814]/70 border-b-2 border-emerald-800/60 focus:border-emerald-400 rounded-t-lg text-xs sm:text-sm font-medium text-white placeholder-slate-400 focus:outline-none transition-all"
+                className={`w-full pl-9 pr-8 py-2.5 bg-[#021814]/70 border-b-2 ${
+                  formData.email ? (isEmailValid ? 'border-emerald-400' : 'border-rose-500') : 'border-emerald-800/60'
+                } focus:border-emerald-400 rounded-t-lg text-xs sm:text-sm font-medium text-white placeholder-slate-400 focus:outline-none transition-all`}
               />
+              {formData.email && (
+                <div className="absolute right-2.5 top-3">
+                  {isEmailValid ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <AlertCircle className="w-3.5 h-3.5 text-rose-400" />}
+                </div>
+              )}
             </div>
 
             <div className="relative">
@@ -165,8 +246,15 @@ export default function RegisterPage({ onRegisterSuccess = () => {}, onNavigate 
                 value={formData.phone}
                 onChange={handleChange}
                 placeholder="Phone Number"
-                className="w-full pl-9 pr-3 py-2.5 bg-[#021814]/70 border-b-2 border-emerald-800/60 focus:border-emerald-400 rounded-t-lg text-xs sm:text-sm font-medium text-white placeholder-slate-400 focus:outline-none transition-all"
+                className={`w-full pl-9 pr-8 py-2.5 bg-[#021814]/70 border-b-2 ${
+                  formData.phone ? (isPhoneValid ? 'border-emerald-400' : 'border-rose-500') : 'border-emerald-800/60'
+                } focus:border-emerald-400 rounded-t-lg text-xs sm:text-sm font-medium text-white placeholder-slate-400 focus:outline-none transition-all`}
               />
+              {formData.phone && (
+                <div className="absolute right-2.5 top-3">
+                  {isPhoneValid ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <AlertCircle className="w-3.5 h-3.5 text-rose-400" />}
+                </div>
+              )}
             </div>
           </div>
 
@@ -238,10 +326,20 @@ export default function RegisterPage({ onRegisterSuccess = () => {}, onNavigate 
                 value={formData.confirm_password}
                 onChange={handleChange}
                 placeholder="Confirm Password *"
-                className="w-full pl-9 pr-3 py-2.5 bg-[#021814]/70 border-b-2 border-emerald-800/60 focus:border-emerald-400 rounded-t-lg text-xs sm:text-sm font-medium text-white placeholder-slate-400 focus:outline-none transition-all"
+                className={`w-full pl-9 pr-8 py-2.5 bg-[#021814]/70 border-b-2 ${
+                  formData.confirm_password ? (isPasswordMatch ? 'border-emerald-400' : 'border-rose-500') : 'border-emerald-800/60'
+                } focus:border-emerald-400 rounded-t-lg text-xs sm:text-sm font-medium text-white placeholder-slate-400 focus:outline-none transition-all`}
               />
+              {formData.confirm_password && (
+                <div className="absolute right-2.5 top-3">
+                  {isPasswordMatch ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <AlertCircle className="w-3.5 h-3.5 text-rose-400" />}
+                </div>
+              )}
             </div>
           </div>
+
+          {/* Real-time Password Strength Meter */}
+          <PasswordStrengthBar password={formData.password} />
 
           {/* Terms Checkbox */}
           <div className="flex items-center gap-2 pt-1">

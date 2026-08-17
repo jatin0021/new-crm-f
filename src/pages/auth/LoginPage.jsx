@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Eye, EyeOff, Mail, Phone, Lock, AlertCircle, ArrowRight, User } from 'lucide-react';
+import { Eye, EyeOff, Mail, Phone, Lock, AlertCircle, ArrowRight, User, CheckSquare, Square } from 'lucide-react';
 import AuthLayout from '../../components/auth/AuthLayout';
 
 export default function LoginPage({ onLoginSuccess = () => {}, onNavigate = () => {} }) {
@@ -7,7 +7,9 @@ export default function LoginPage({ onLoginSuccess = () => {}, onNavigate = () =
   const [email, setEmail] = useState('trader@example.com');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('password123');
+  const [rememberMe, setRememberMe] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
@@ -19,8 +21,10 @@ export default function LoginPage({ onLoginSuccess = () => {}, onNavigate = () =
     try {
       const payload = {
         password,
+        turnstile_token: turnstileToken,
         ...(activeLoginTab === 'email' ? { email } : { phone })
       };
+
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -39,16 +43,34 @@ export default function LoginPage({ onLoginSuccess = () => {}, onNavigate = () =
       }
 
       if (response.ok && (data.ok || data.success) && data.data?.token) {
-        localStorage.setItem('crm_jwt_token', data.data.token);
-        localStorage.setItem('crm_user', JSON.stringify(data.data.user));
-        onLoginSuccess(data.data.user);
+        const token = data.data.token;
+        const user = data.data.user;
+
+        // Remember Me session storage selection
+        if (rememberMe) {
+          localStorage.setItem('crm_jwt_token', token);
+          localStorage.setItem('crm_user', JSON.stringify(user));
+          sessionStorage.removeItem('crm_jwt_token');
+          sessionStorage.removeItem('crm_user');
+        } else {
+          sessionStorage.setItem('crm_jwt_token', token);
+          sessionStorage.setItem('crm_user', JSON.stringify(user));
+          localStorage.removeItem('crm_jwt_token');
+          localStorage.removeItem('crm_user');
+        }
+
+        onLoginSuccess(user);
       } else {
         setErrorMessage(data.message || data.error || 'Invalid email or password');
       }
     } catch (err) {
       if (email === 'trader@example.com' && password === 'password123') {
-        const demoUser = { id: 1, email: 'trader@example.com', first_name: 'John', last_name: 'Doe' };
-        localStorage.setItem('crm_user', JSON.stringify(demoUser));
+        const demoUser = { id: 1, email: 'trader@example.com', first_name: 'John', last_name: 'Doe', email_verified: true };
+        if (rememberMe) {
+          localStorage.setItem('crm_user', JSON.stringify(demoUser));
+        } else {
+          sessionStorage.setItem('crm_user', JSON.stringify(demoUser));
+        }
         onLoginSuccess(demoUser);
       } else {
         setErrorMessage(err.message || 'Server connection error. Please ensure backend server is active.');
@@ -62,7 +84,7 @@ export default function LoginPage({ onLoginSuccess = () => {}, onNavigate = () =
     <AuthLayout>
       <div className="space-y-5 text-center">
         
-        {/* Title & Subtitle Matching Reference */}
+        {/* Title & Subtitle */}
         <div className="space-y-1">
           <h2 className="text-3xl font-extrabold text-white tracking-tight">
             Welcome Back
@@ -106,7 +128,7 @@ export default function LoginPage({ onLoginSuccess = () => {}, onNavigate = () =
           </div>
         )}
 
-        {/* Form Inputs matching reference icon-on-left style */}
+        {/* Form Inputs */}
         <form onSubmit={handleSubmit} className="space-y-4 text-left">
           
           {/* Email / Phone Field */}
@@ -141,7 +163,7 @@ export default function LoginPage({ onLoginSuccess = () => {}, onNavigate = () =
           )}
 
           {/* Password Field */}
-          <div>
+          <div className="space-y-2">
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-emerald-400/80">
                 <Lock className="w-4 h-4" />
@@ -163,19 +185,31 @@ export default function LoginPage({ onLoginSuccess = () => {}, onNavigate = () =
               </button>
             </div>
 
-            {/* Forgot Password Link */}
-            <div className="pt-2 text-left">
+            {/* Remember Me & Forgot Password Options Row */}
+            <div className="flex items-center justify-between text-xs pt-1">
+              <label 
+                onClick={() => setRememberMe(!rememberMe)}
+                className="flex items-center gap-1.5 text-slate-300 font-medium cursor-pointer select-none hover:text-white transition-colors"
+              >
+                {rememberMe ? (
+                  <CheckSquare className="w-4 h-4 text-emerald-400 shrink-0" />
+                ) : (
+                  <Square className="w-4 h-4 text-slate-500 shrink-0" />
+                )}
+                <span>Remember Me</span>
+              </label>
+
               <button
                 type="button"
                 onClick={() => onNavigate('forgot-password')}
-                className="text-xs font-semibold text-slate-400 hover:text-emerald-400 transition-colors cursor-pointer"
+                className="font-semibold text-slate-400 hover:text-emerald-400 transition-colors cursor-pointer"
               >
                 Forgot Password?
               </button>
             </div>
           </div>
 
-          {/* Main Action Pill Button matching reference (Vibrant Emerald Gradient) */}
+          {/* Sign In Button */}
           <button
             type="submit"
             disabled={loading}
@@ -202,7 +236,7 @@ export default function LoginPage({ onLoginSuccess = () => {}, onNavigate = () =
           </div>
         </div>
 
-        {/* Google SSO Button matching reference */}
+        {/* Google SSO Button */}
         <button
           type="button"
           onClick={() => alert('Google SSO Authentication gateway initialized')}
@@ -229,7 +263,7 @@ export default function LoginPage({ onLoginSuccess = () => {}, onNavigate = () =
           <span>Sign in with Google</span>
         </button>
 
-        {/* Footer Link matching reference: Don't have an account? Sign Up */}
+        {/* Footer Link */}
         <div className="pt-2 text-center">
           <p className="text-xs font-semibold text-slate-400">
             Don't have an account?{' '}
@@ -246,4 +280,3 @@ export default function LoginPage({ onLoginSuccess = () => {}, onNavigate = () =
     </AuthLayout>
   );
 }
-
