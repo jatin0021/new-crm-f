@@ -4,6 +4,10 @@ import Dashboard from './pages/user/Dashboard';
 import AccountsPage from './pages/user/AccountsPage';
 import FundsPage from './pages/user/FundsPage';
 import KYCPage from './pages/user/KYCPage';
+import ProfileSecurityPage from './pages/user/ProfileSecurityPage';
+import IbPortalPage from './pages/user/IbPortalPage';
+import MarketAnalysisPage from './pages/user/MarketAnalysisPage';
+import SupportHelpdeskPage from './pages/user/SupportHelpdeskPage';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminLoginPage from './pages/auth/AdminLoginPage';
 import LiveChatWidget from './components/common/LiveChatWidget';
@@ -371,9 +375,13 @@ export default function App() {
         {activeTab === 'Accounts' && <AccountsPage />}
         {activeTab === 'Funds' && <FundsPage />}
         {activeTab === 'KYC' && <KYCPage />}
+        {activeTab === 'Profile' && <ProfileSecurityPage defaultSubTab="profile" />}
+        {activeTab === 'IbPortal' && <IbPortalPage />}
+        {activeTab === 'Analysis' && <MarketAnalysisPage />}
+        {activeTab === 'Support' && <SupportHelpdeskPage />}
         
-        {/* Fallbacks for Trade, Copy Trading, V-Wallet, Webinar, IB, Support */}
-        {(activeTab === 'Trade' || activeTab === 'Copy Trading' || activeTab === 'V-Wallet' || activeTab === 'Webinar' || activeTab === 'IBProgramme' || activeTab === 'Analysis' || activeTab === 'Support') && (
+        {/* Fallbacks for Trade, Copy Trading, V-Wallet, Webinar */}
+        {(activeTab === 'Trade' || activeTab === 'Copy Trading' || activeTab === 'V-Wallet' || activeTab === 'Webinar') && (
           <div className="bg-white rounded-3xl p-8 sm:p-12 text-center border border-slate-200/80 card-shadow space-y-4 max-w-2xl mx-auto my-8">
             <div className="w-16 h-16 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto font-black text-xl border border-emerald-200/60 shadow-xs">
               {activeTab.charAt(0)}
