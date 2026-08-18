@@ -332,7 +332,9 @@ export default function ProfileSecurityPage({ defaultSubTab = 'profile' }) {
       const token = localStorage.getItem('crm_jwt_token') || sessionStorage.getItem('crm_jwt_token');
       const formData = new FormData();
       formData.append('file', uploadFile);
+      formData.append('id_document', uploadFile);
       formData.append('documentType', manualDocCategory);
+      formData.append('document_type', manualDocCategory);
       formData.append('idType', manualIdType);
 
       const res = await fetch(getApiUrl('/api/kyc/upload'), {
@@ -373,17 +375,22 @@ export default function ProfileSecurityPage({ defaultSubTab = 'profile' }) {
 
         {/* Real-time KYC Status Header Badge */}
         <div className="flex items-center gap-2">
-          {kycStatus === 'verified' && (
+          {['verified', 'approved', 'passed', 'completed'].includes((kycStatus || '').toLowerCase()) && (
             <span className="px-3.5 py-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full text-xs font-black inline-flex items-center gap-1.5">
               <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Identity Verified
             </span>
           )}
-          {kycStatus === 'pending' && (
+          {['pending', 'in_review', 'under_review'].includes((kycStatus || '').toLowerCase()) && (
             <span className="px-3.5 py-1.5 bg-amber-50 text-amber-700 border border-amber-200 rounded-full text-xs font-black inline-flex items-center gap-1.5 animate-pulse">
               <AlertCircle className="w-4 h-4 text-amber-600" /> Verification Pending Review
             </span>
           )}
-          {kycStatus === 'unverified' && (
+          {['rejected', 'failed', 'declined'].includes((kycStatus || '').toLowerCase()) && (
+            <span className="px-3.5 py-1.5 bg-rose-50 text-rose-700 border border-rose-200 rounded-full text-xs font-black inline-flex items-center gap-1.5">
+              <XCircle className="w-4 h-4 text-rose-600" /> Verification Rejected
+            </span>
+          )}
+          {!['verified', 'approved', 'passed', 'completed', 'pending', 'in_review', 'under_review', 'rejected', 'failed', 'declined'].includes((kycStatus || '').toLowerCase()) && (
             <span className="px-3.5 py-1.5 bg-slate-100 text-slate-700 border border-slate-200 rounded-full text-xs font-black inline-flex items-center gap-1.5">
               <ShieldCheck className="w-4 h-4 text-slate-400" /> Identity Unverified
             </span>

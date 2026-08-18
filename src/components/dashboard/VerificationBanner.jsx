@@ -14,11 +14,21 @@ export default function VerificationBanner({ currentUser = null, onVerify = () =
   const [kycStatus, setKycStatus] = useState(() => {
     try {
       const u = currentUser || JSON.parse(localStorage.getItem('crm_user') || '{}');
-      return (u.kyc_status || 'unverified').toLowerCase();
+      return (u?.kyc_status || u?.status || 'unverified').toLowerCase();
     } catch (e) {
       return 'unverified';
     }
   });
+
+  // Keep state in sync with prop updates from App/Dashboard
+  useEffect(() => {
+    if (currentUser) {
+      setUserProfile(prev => ({ ...prev, ...currentUser }));
+      if (currentUser.kyc_status || currentUser.status) {
+        setKycStatus((currentUser.kyc_status || currentUser.status).toLowerCase());
+      }
+    }
+  }, [currentUser]);
 
   const checkStatusAndProfile = async () => {
     const token = localStorage.getItem('crm_jwt_token') || sessionStorage.getItem('crm_jwt_token');
@@ -27,7 +37,9 @@ export default function VerificationBanner({ currentUser = null, onVerify = () =
       const [kycRes, profileRes] = await Promise.all([
         fetch(getApiUrl('/api/kyc/status'), { headers: { 'Authorization': `Bearer ${token}` } }),
         fetch(getApiUrl('/api/user/profile'), { headers: { 'Authorization': `Bearer ${token}` } })
-      ]);      const parseJsonSafely = async (res) => {
+      ]);
+
+      const parseJsonSafely = async (res) => {
         if (!res || !res.ok) return null;
         try {
           const text = await res.text();
@@ -39,13 +51,13 @@ export default function VerificationBanner({ currentUser = null, onVerify = () =
       };
 
       const kycData = await parseJsonSafely(kycRes);
-      if (kycData?.data?.kyc_status) {
-        const newSt = kycData.data.kyc_status.toLowerCase();
-        setKycStatus(newSt);
+      const fetchedKycSt = (kycData?.data?.kyc_status || kycData?.data?.status || '').toLowerCase();
+      if (fetchedKycSt) {
+        setKycStatus(fetchedKycSt);
         try {
           const userObj = JSON.parse(localStorage.getItem('crm_user') || '{}');
-          if (userObj.kyc_status !== newSt) {
-            userObj.kyc_status = newSt;
+          if (userObj.kyc_status !== fetchedKycSt) {
+            userObj.kyc_status = fetchedKycSt;
             localStorage.setItem('crm_user', JSON.stringify(userObj));
           }
         } catch (err) {}
@@ -54,6 +66,9 @@ export default function VerificationBanner({ currentUser = null, onVerify = () =
       const profData = await parseJsonSafely(profileRes);
       if (profData?.data?.profile) {
         setUserProfile(prev => ({ ...prev, ...profData.data.profile }));
+        if (profData.data.profile.kyc_status) {
+          setKycStatus(profData.data.profile.kyc_status.toLowerCase());
+        }
       }
     } catch (e) {
       // Silent catch
@@ -70,18 +85,15 @@ export default function VerificationBanner({ currentUser = null, onVerify = () =
   const lastName = userProfile?.last_name || userProfile?.name?.split(' ').slice(1).join(' ') || '';
   const fullName = `${firstName} ${lastName}`.trim();
 
+  const isVerified = ['verified', 'approved', 'passed', 'completed'].includes(kycStatus);
+  const isPending = ['pending', 'in_review', 'under_review'].includes(kycStatus);
+  const isRejected = ['rejected', 'failed', 'declined'].includes(kycStatus);
+
   const getProgressPercentage = () => {
-    switch (kycStatus) {
-      case 'verified':
-        return 100;
-      case 'pending':
-        return 50;
-      case 'rejected':
-        return 25;
-      case 'unverified':
-      default:
-        return 25;
-    }
+    if (isVerified) return 100;
+    if (isPending) return 50;
+    if (isRejected) return 25;
+    return 25;
   };
 
   const percentage = getProgressPercentage();
@@ -90,37 +102,36 @@ export default function VerificationBanner({ currentUser = null, onVerify = () =
   const strokeDashoffset = circumference - (percentage / 100) * circumference;
 
   const getChecklist = () => {
-    switch (kycStatus) {
-      case 'verified':
-        return [
-          { label: 'Account opened', status: 'done' },
-          { label: 'Compliance', status: 'done' },
-          { label: 'Legal & Bank verified', status: 'done' },
-          { label: 'Trading enabled', status: 'done' }
-        ];
-      case 'pending':
-        return [
-          { label: 'Account opened', status: 'done' },
-          { label: 'Compliance review', status: 'pending' },
-          { label: 'Legal & Bank pending', status: 'pending' },
-          { label: 'Trading restricted', status: 'locked' }
-        ];
-      case 'rejected':
-        return [
-          { label: 'Account opened', status: 'done' },
-          { label: 'Compliance rejected', status: 'rejected' },
-          { label: 'Resubmission needed', status: 'rejected' },
-          { label: 'Trading restricted', status: 'locked' }
-        ];
-      case 'unverified':
-      default:
-        return [
-          { label: 'Account opened', status: 'done' },
-          { label: 'Compliance required', status: 'action' },
-          { label: 'Legal & Bank unverified', status: 'action' },
-          { label: 'Trading restricted', status: 'locked' }
-        ];
+    if (isVerified) {
+      return [
+        { label: 'Account opened', status: 'done' },
+        { label: 'Compliance', status: 'done' },
+        { label: 'Legal & Bank verified', status: 'done' },
+        { label: 'Trading enabled', status: 'done' }
+      ];
     }
+    if (isPending) {
+      return [
+        { label: 'Account opened', status: 'done' },
+        { label: 'Compliance review', status: 'pending' },
+        { label: 'Legal & Bank pending', status: 'pending' },
+        { label: 'Trading restricted', status: 'locked' }
+      ];
+    }
+    if (isRejected) {
+      return [
+        { label: 'Account opened', status: 'done' },
+        { label: 'Compliance rejected', status: 'rejected' },
+        { label: 'Resubmission needed', status: 'rejected' },
+        { label: 'Trading restricted', status: 'locked' }
+      ];
+    }
+    return [
+      { label: 'Account opened', status: 'done' },
+      { label: 'Compliance required', status: 'action' },
+      { label: 'Legal & Bank unverified', status: 'action' },
+      { label: 'Trading restricted', status: 'locked' }
+    ];
   };
 
   const checklist = getChecklist();
@@ -142,22 +153,22 @@ export default function VerificationBanner({ currentUser = null, onVerify = () =
             Welcome to your dashboard. Here you can review balances, switch accounts, and jump to deposits or trading.
           </p>
 
-          {kycStatus !== 'verified' && (
+          {!isVerified && (
             <div className="pt-2">
               <button
                 onClick={onVerify}
                 className={`px-4.5 py-2 text-xs font-extrabold rounded-full transition-all flex items-center gap-2 cursor-pointer ${
-                  kycStatus === 'pending'
+                  isPending
                     ? 'bg-amber-400/20 text-amber-200 border border-amber-400/40 hover:bg-amber-400/30'
-                    : kycStatus === 'rejected'
+                    : isRejected
                     ? 'bg-rose-400/20 text-rose-200 border border-rose-400/40 hover:bg-rose-400/30'
                     : 'bg-gradient-to-r from-emerald-400 to-teal-400 hover:from-emerald-300 hover:to-teal-300 text-slate-950 font-black shadow-lg shadow-emerald-500/25'
                 }`}
               >
                 <span>
-                  {kycStatus === 'pending'
+                  {isPending
                     ? 'Check Verification Status'
-                    : kycStatus === 'rejected'
+                    : isRejected
                     ? 'Re-upload KYC Documents'
                     : 'Complete Identity Verification'}
                 </span>
@@ -190,7 +201,7 @@ export default function VerificationBanner({ currentUser = null, onVerify = () =
                     ? 'stroke-emerald-400'
                     : percentage === 50
                     ? 'stroke-amber-400'
-                    : percentage === 25 && kycStatus === 'rejected'
+                    : percentage === 25 && isRejected
                     ? 'stroke-rose-400'
                     : 'stroke-teal-400'
                 }`}

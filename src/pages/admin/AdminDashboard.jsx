@@ -405,7 +405,7 @@ export default function AdminDashboard({ adminUser = {}, onImpersonate = () => {
   const handleApproveKyc = async (docId, newStatus) => {
     const token = localStorage.getItem('crm_admin_token') || localStorage.getItem('crm_jwt_token');
     try {
-      const res = await fetch(`/api/admin/kyc/${docId}`, {
+      const res = await fetch(getApiUrl(`/api/admin/kyc/${docId}`), {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',

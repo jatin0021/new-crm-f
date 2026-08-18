@@ -415,7 +415,7 @@ export default function App() {
       <main className="flex-1 w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-10 py-6 sm:py-8">
         
         {/* Render Active Tab View */}
-        {activeTab === 'Home' && <Dashboard onNavigate={(tab) => setActiveTab(tab)} />}
+        {activeTab === 'Home' && <Dashboard currentUser={currentUser} onNavigate={(tab) => setActiveTab(tab)} />}
         {activeTab === 'Accounts' && <AccountsPage />}
         {activeTab === 'Funds' && <FundsPage />}
         {activeTab === 'KYC' && <KYCPage />}

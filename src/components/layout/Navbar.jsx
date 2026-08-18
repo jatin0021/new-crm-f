@@ -247,19 +247,19 @@ export default function Navbar({ activeTab = 'Home', setActiveTab = () => {}, cu
                         {currentUser?.first_name || 'Trader'} {currentUser?.last_name || ''}
                       </p>
                       <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full border ${
-                        (currentUser?.kyc_status || '').toLowerCase() === 'verified'
+                        ['verified', 'approved', 'passed', 'completed'].includes((currentUser?.kyc_status || '').toLowerCase())
                           ? 'bg-emerald-100 text-emerald-800 border-emerald-200/60'
-                          : (currentUser?.kyc_status || '').toLowerCase() === 'pending'
+                          : ['pending', 'in_review', 'under_review'].includes((currentUser?.kyc_status || '').toLowerCase())
                           ? 'bg-amber-100 text-amber-800 border-amber-200/60 animate-pulse'
-                          : (currentUser?.kyc_status || '').toLowerCase() === 'rejected'
+                          : ['rejected', 'failed', 'declined'].includes((currentUser?.kyc_status || '').toLowerCase())
                           ? 'bg-rose-100 text-rose-800 border-rose-200/60'
                           : 'bg-slate-100 text-slate-700 border-slate-200/60'
                       }`}>
-                        {(currentUser?.kyc_status || '').toLowerCase() === 'verified'
+                        {['verified', 'approved', 'passed', 'completed'].includes((currentUser?.kyc_status || '').toLowerCase())
                           ? 'Verified ✅'
-                          : (currentUser?.kyc_status || '').toLowerCase() === 'pending'
+                          : ['pending', 'in_review', 'under_review'].includes((currentUser?.kyc_status || '').toLowerCase())
                           ? 'Pending ⏳'
-                          : (currentUser?.kyc_status || '').toLowerCase() === 'rejected'
+                          : ['rejected', 'failed', 'declined'].includes((currentUser?.kyc_status || '').toLowerCase())
                           ? 'Rejected ❌'
                           : 'Not Verified'}
                       </span>

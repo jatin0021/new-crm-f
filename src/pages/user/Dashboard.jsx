@@ -4,13 +4,13 @@ import AssetsEstimateCard from '../../components/dashboard/AssetsEstimateCard';
 import TradingAccountCard from '../../components/dashboard/TradingAccountCard';
 import MarketsWidget from '../../components/dashboard/MarketsWidget';
 
-export default function Dashboard({ onNavigate = () => {} }) {
+export default function Dashboard({ currentUser = null, onNavigate = () => {} }) {
   return (
     <div className="space-y-6 sm:space-y-8">
       
       {/* Top Banner: Verification Alert */}
       <section>
-        <VerificationBanner onVerify={() => onNavigate('KYC')} />
+        <VerificationBanner currentUser={currentUser} onVerify={() => onNavigate('KYC')} />
       </section>
 
       {/* Two Column Cards Grid: Total Assets Estimate + Trading Account setup */}

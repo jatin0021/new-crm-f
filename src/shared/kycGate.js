@@ -7,7 +7,7 @@
 
 export const isKycApproved = (user) => {
   const status = (user?.kyc_status || user?.status || 'unverified').toLowerCase();
-  return status === 'verified' || status === 'approved';
+  return ['verified', 'approved', 'passed', 'completed'].includes(status);
 };
 
 /**
