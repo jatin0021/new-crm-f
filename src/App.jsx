@@ -313,16 +313,6 @@ export default function App() {
                   </span>
                 </div>
 
-                {/* Return to Trader Portal */}
-                <button
-                  onClick={() => navigateTo('/')}
-                  className="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white rounded-full text-xs font-bold transition-all border border-slate-700 flex items-center gap-1.5 cursor-pointer"
-                  title="Switch to Trader Portal"
-                >
-                  <ArrowLeft className="w-3.5 h-3.5 text-emerald-400" />
-                  <span className="hidden sm:inline">Trader Portal</span>
-                </button>
-
                 {/* Logout Admin */}
                 <button
                   onClick={handleAdminLogout}
