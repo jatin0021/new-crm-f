@@ -69,7 +69,6 @@ export default function AdminDashboard({ adminUser = {}, onImpersonate = () => {
   const [terminalSubTab, setTerminalSubTab] = useState('accounts');
   const [finOpsSubTab, setFinOpsSubTab] = useState('deposits_queue'); // 'deposits_queue' | 'withdrawals_queue' | 'p2p' | 'gateways' | 'verification' | 'adjustments'
 
->>>>>>> 8f54ef3d7f0ad5f774c9a40a544901864c750e9e
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedUser, setSelectedUser] = useState(null);
@@ -379,7 +378,6 @@ export default function AdminDashboard({ adminUser = {}, onImpersonate = () => {
             email: d.email || 'N/A'
           }));
           setKycRequests(normalizedKyc);
->>>>>>> 8f54ef3d7f0ad5f774c9a40a544901864c750e9e
         }
       }
     } catch (e) {
