@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useAlert } from '../../context/AlertContext';
 import { 
   Users, 
   Share2, 
@@ -43,51 +44,41 @@ export default function IbPortalPage() {
   const [calcTier, setCalcTier] = useState(8.00); // $8 per lot
 
   // IB Clients List
-  const [clients, setClients] = useState([
-    { id: 101, name: 'Alex Smith', email: 'alex@example.com', login: 501928, equity: 15400.50, traded_lots: 120.50, rebate_earned: 602.50, registered_at: '2026-07-10' },
-    { id: 102, name: 'Elena Rostova', email: 'elena@example.com', login: 725249, equity: 8200.00, traded_lots: 85.00, rebate_earned: 425.00, registered_at: '2026-07-18' },
-    { id: 103, name: 'David Miller', email: 'david@example.com', login: 301920, equity: 3500.00, traded_lots: 60.00, rebate_earned: 300.00, registered_at: '2026-08-01' }
-  ]);
-
-  // IB Partner Application State
-  const [appExperience, setAppExperience] = useState('2-5 Years');
-  const [appLots, setAppLots] = useState('100-500 Lots');
-  const [appRegion, setAppRegion] = useState('Middle East & North Africa');
-  const [appStrategy, setAppStrategy] = useState('Social Media Trading Community & Local Seminars');
-  const [appSubmitted, setAppSubmitted] = useState(false);
-
-  // Fetch IB Overview on Mount
+  // Fetch IB Profile and Clients on Mount
   useEffect(() => {
     const fetchIbData = async () => {
       try {
         const token = localStorage.getItem('crm_jwt_token') || sessionStorage.getItem('crm_jwt_token');
-        const res = await fetch('/api/ib/overview', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (res.ok) {
-          const data = await res.json();
-          if (data.data?.ib_profile) setIbProfile(data.data.ib_profile);
-          if (data.data?.referral_link) setReferralLink(data.data.referral_link);
+        const [profRes, clientRes] = await Promise.all([
+          fetch('/api/ib/profile', { headers: { 'Authorization': `Bearer ${token}` } }),
+          fetch('/api/ib/clients', { headers: { 'Authorization': `Bearer ${token}` } })
+        ]);
+
+        if (profRes.ok) {
+          const pData = await profRes.json();
+          if (pData.data?.ib) {
+            setIbProfile(pData.data.ib);
+          }
         }
 
-        const clientRes = await fetch('/api/ib/clients', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
         if (clientRes.ok) {
-          const clientData = await clientRes.json();
-          if (clientData.data?.clients) setClients(clientData.data.clients);
+          const cData = await clientRes.json();
+          if (cData.data?.clients) {
+            setReferredClients(cData.data.clients);
+          }
         }
       } catch (e) {
         console.warn('IB fetch warning:', e.message);
       }
     };
+
     fetchIbData();
   }, []);
 
   // 1-Click Transfer Commission to Main Trader Wallet Handler
   const handleTransferCommission = async () => {
     if (ibProfile.commission_balance <= 0) {
-      alert('No available commission balance to transfer');
+      alertWarning('No available commission balance to transfer');
       return;
     }
 
@@ -108,12 +99,13 @@ export default function IbPortalPage() {
       const data = await res.json();
       if (res.ok) {
         setCommMsg(`Successfully transferred $${ibProfile.commission_balance.toFixed(2)} USD into main wallet!`);
+        alertSuccess(`Successfully transferred $${ibProfile.commission_balance.toFixed(2)} USD into main wallet!`);
         setIbProfile(prev => ({ ...prev, commission_balance: 0.00 }));
       } else {
-        alert(data.message || 'Transfer failed');
+        alertError(data.message || 'Transfer failed');
       }
     } catch (e) {
-      alert('Server connection error during transfer');
+      alertError('Server connection error during transfer');
     } finally {
       setTransferringComm(false);
     }
@@ -140,7 +132,7 @@ export default function IbPortalPage() {
       const data = await res.json();
       if (res.ok) setAppSubmitted(true);
     } catch (e) {
-      alert('Server error');
+      alertError('Server error');
     }
   };
 
@@ -533,7 +525,7 @@ export default function IbPortalPage() {
                 <h4 className="font-extrabold text-xs text-slate-900">{asset.title}</h4>
                 <p className="text-[11px] text-slate-500">{asset.desc}</p>
                 <button
-                  onClick={() => alert(`Downloading ${asset.title}...`)}
+                  onClick={() => alertInfo(`Downloading ${asset.title}...`)}
                   className="w-full py-2 bg-blue-600 hover:bg-blue-500 text-white font-extrabold text-xs rounded-xl shadow-xs cursor-pointer flex items-center justify-center gap-1"
                 >
                   <Download className="w-3.5 h-3.5" />

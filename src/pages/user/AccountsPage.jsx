@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useAlert } from '../../context/AlertContext';
 import { 
   Plus, 
   PlusCircle,
@@ -24,6 +25,7 @@ import ChangeAccountPasswordModal from '../../components/common/ChangeAccountPas
 import { redirectIfUnverifiedKyc } from '../../shared/kycGate.js';
 
 export default function AccountsPage() {
+  const { showAlert, alertSuccess, alertError, alertInfo, alertWarning } = useAlert();
   const [activeTab, setActiveTab] = useState('accounts'); // 'accounts' | 'create' | 'performance' | 'copy'
   
   // Demo Top-Up Modal State
@@ -109,10 +111,10 @@ export default function AccountsPage() {
       if (res.ok && data.data?.webtrader_url) {
         window.open(data.data.webtrader_url, '_blank');
       } else {
-        alert(`Launching WebTrader SSO terminal for Account #${loginNumber}...`);
+        alertInfo(`Launching WebTrader SSO terminal for Account #${loginNumber}...`);
       }
     } catch (e) {
-      alert(`Launching WebTrader SSO terminal for Account #${loginNumber}...`);
+      alertInfo(`Launching WebTrader SSO terminal for Account #${loginNumber}...`);
     }
   };
 
@@ -128,7 +130,7 @@ export default function AccountsPage() {
       const user = userStr ? JSON.parse(userStr) : null;
       const isBlocked = redirectIfUnverifiedKyc({
         user,
-        onUnverified: (msg) => alert(`KYC Verification Required: ${msg}`)
+        onUnverified: (msg) => alertWarning(`KYC Verification Required: ${msg}`)
       });
       if (isBlocked) {
         setCreating(false);
@@ -164,10 +166,10 @@ export default function AccountsPage() {
           setActiveTab('accounts');
         }, 1500);
       } else {
-        alert(data.message || 'Failed to create trading account.');
+        alertError(data.message || 'Failed to create trading account.');
       }
     } catch (err) {
-      alert('Server connection error during account creation.');
+      alertError('Server connection error during account creation.');
     } finally {
       setCreating(false);
     }
@@ -193,7 +195,7 @@ export default function AccountsPage() {
       });
       const data = await res.json();
       if (res.ok && data.data) {
-        alert(data.message || 'Demo account topped up successfully!');
+        alertSuccess(data.message || 'Demo account topped up successfully!');
         setAccounts(prev => prev.map(a => 
           (a.account_number === showDemoTopUpModal.account_number || a.login === showDemoTopUpModal.login)
             ? { ...a, balance: data.data.new_balance, equity: data.data.new_balance, free_margin: data.data.new_balance }
@@ -201,10 +203,10 @@ export default function AccountsPage() {
         ));
         setShowDemoTopUpModal(null);
       } else {
-        alert(data.message || 'Failed to top up demo account.');
+        alertError(data.message || 'Failed to top up demo account.');
       }
     } catch (err) {
-      alert('Server connection error during demo top-up.');
+      alertError('Server connection error during demo top-up.');
     } finally {
       setToppingUp(false);
     }
@@ -212,7 +214,7 @@ export default function AccountsPage() {
 
   // 3. Copy Trading Follow Strategy Handler
   const handleFollowStrategy = async (provider) => {
-    alert(`Successfully allocated $${provider.min_deposit} USD to Copy Strategy "${provider.name}". Automatic execution enabled.`);
+    alertSuccess(`Successfully allocated $${provider.min_deposit} USD to Copy Strategy "${provider.name}". Automatic execution enabled.`);
   };
 
   return (

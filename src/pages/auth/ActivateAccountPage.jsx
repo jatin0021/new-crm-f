@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import { useAlert } from '../../context/AlertContext';
 import { CheckCircle2, AlertCircle, ArrowRight, ShieldCheck, Mail } from 'lucide-react';
 import AuthLayout from '../../components/auth/AuthLayout';
 
 export default function ActivateAccountPage({ onNavigate = () => {} }) {
+  const { alertSuccess } = useAlert();
   const searchParams = new URLSearchParams(window.location.search);
   const token = searchParams.get('token') || '';
   const emailParam = searchParams.get('email') || '';
@@ -120,7 +122,7 @@ export default function ActivateAccountPage({ onNavigate = () => {} }) {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email: emailParam })
                   });
-                  alert(`A fresh activation link has been resent to ${emailParam}`);
+                  alertSuccess(`A fresh activation link has been resent to ${emailParam}`);
                 }}
                 className="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-full transition-all cursor-pointer shadow-md shadow-emerald-600/30 flex items-center justify-center gap-1.5"
               >

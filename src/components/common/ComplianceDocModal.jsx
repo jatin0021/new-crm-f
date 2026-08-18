@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useAlert } from '../../context/AlertContext';
 import { FileText, Download, X, Check, ShieldCheck, Lock, Cookie, Scale, ExternalLink } from 'lucide-react';
 
 export default function ComplianceDocModal({ 
@@ -6,6 +7,7 @@ export default function ComplianceDocModal({
   onClose = () => {}, 
   docType = 'risk' // 'risk' | 'cookie' | 'execution' | 'privacy'
 }) {
+  const { alertInfo } = useAlert();
   const [cookieConsent, setCookieConsent] = useState({
     essential: true,
     analytical: true,
@@ -25,7 +27,7 @@ export default function ComplianceDocModal({
   const IconComponent = currentDoc.icon;
 
   const handleDownloadPdf = () => {
-    alert(`Downloading official PDF copy: ${currentDoc.title} (${currentDoc.code}.pdf)`);
+    alertInfo(`Downloading official PDF copy: ${currentDoc.title} (${currentDoc.code}.pdf)`);
   };
 
   return (

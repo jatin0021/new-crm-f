@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useAlert } from '../../context/AlertContext';
 import { Bookmark, Plus, Check, X, ShieldCheck, QrCode, Landmark, CreditCard } from 'lucide-react';
 
 export default function AddressBookModal({
@@ -6,6 +7,7 @@ export default function AddressBookModal({
   onClose = () => {},
   onSelectAddress = () => {}
 }) {
+  const { alertError, alertSuccess } = useAlert();
   const [addresses, setAddresses] = useState([
     { id: 1, label: 'My Binance TRC20 Wallet', method: 'crypto_usdt', network: 'TRC20', address: 'T9zXX9Kpq7aK9qP8291mLaZ387nK', is_whitelisted: true },
     { id: 2, label: 'Personal Barclays IBAN', method: 'bank_wire', network: 'NATIVE', address: 'GB82 BARC 2020 1530 9018 29', is_whitelisted: true }
@@ -65,11 +67,12 @@ export default function AddressBookModal({
         setShowAddForm(false);
         setNewLabel('');
         setNewAddress('');
+        alertSuccess('Withdrawal address saved to address book!');
       } else {
-        alert(data.message || 'Failed to save address');
+        alertError(data.message || 'Failed to save address');
       }
     } catch (e) {
-      alert('Server connection error');
+      alertError('Server connection error');
     } finally {
       setLoading(false);
     }

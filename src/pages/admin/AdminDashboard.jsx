@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useAlert } from '../../context/AlertContext';
 import { 
   Users, 
   User,
@@ -55,6 +56,8 @@ import {
 } from 'lucide-react';
 
 export default function AdminDashboard({ adminUser = {}, onImpersonate = () => {}, onUpdateAdminUser = () => {} }) {
+  const { showAlert, showConfirm, alertSuccess, alertError, alertInfo } = useAlert();
+
   // Requirement 9: Admin Dynamic Index Redirect (Role-aware landing tab)
   const getInitialTab = () => {
     const role = (adminUser.role || '').toLowerCase();
@@ -62,7 +65,7 @@ export default function AdminDashboard({ adminUser = {}, onImpersonate = () => {
     if (role === 'compliance_admin') return 'kyc';
     if (role === 'desk_admin' || role === 'sales_admin') return 'users';
     if (role === 'risk_admin') return 'terminal';
-    return 'analytics'; // Default landing page for Super Admin and general staff
+    return 'users'; // Default landing page for Super Admin and general staff
   };
 
   const [adminTab, setAdminTab] = useState(getInitialTab);
@@ -413,11 +416,12 @@ export default function AdminDashboard({ adminUser = {}, onImpersonate = () => {
       const data = await res.json();
       if (res.ok) {
         await fetchAdminDataFromApi();
+        alertSuccess(`KYC document status updated to '${newStatus}'`);
       } else {
-        alert(data.message || 'Failed to update KYC document status.');
+        alertError(data.message || 'Failed to update KYC document status.');
       }
     } catch (e) {
-      alert('Error updating KYC document status.');
+      alertError('Error updating KYC document status.');
     }
   };
 
@@ -425,27 +429,32 @@ export default function AdminDashboard({ adminUser = {}, onImpersonate = () => {
     setUsers(users.map(u => u.id === userId ? { ...u, is_active: !u.is_active } : u));
   };
 
-  const handleWipeAllUsers = async () => {
-    if (!window.confirm('⚠️ WARNING: Are you sure you want to PERMANENTLY delete ALL users and associated accounts/wallets/deposits/KYC from the database and memory store? This operation CANNOT be undone!')) {
-      return;
-    }
-    const token = localStorage.getItem('crm_admin_token');
-    try {
-      const res = await fetch('/api/admin/users', {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = await res.json();
-      if (res.ok && data.success) {
-        alert('All users wiped successfully.');
-        setUsers([]);
-        fetchAdminDataFromApi();
-      } else {
-        alert(data.message || 'Failed to wipe users.');
-      }
-    } catch (e) {
-      alert('Error initiating user wipe: ' + e.message);
-    }
+  const handleWipeAllUsers = () => {
+    showConfirm(
+      '⚠️ WARNING: Are you sure you want to PERMANENTLY delete ALL users and associated accounts/wallets/deposits/KYC from the database and memory store? This operation CANNOT be undone!',
+      async () => {
+        const token = localStorage.getItem('crm_admin_token');
+        try {
+          const res = await fetch('/api/admin/users', {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          const data = await res.json();
+          if (res.ok && data.success) {
+            alertSuccess('All users wiped successfully.');
+            setUsers([]);
+            fetchAdminDataFromApi();
+          } else {
+            alertError(data.message || 'Failed to wipe users.');
+          }
+        } catch (e) {
+          alertError('Error initiating user wipe: ' + e.message);
+        }
+      },
+      'Wipe All Users',
+      'Permanently Delete All Users',
+      'Cancel'
+    );
   };
 
   // Requirement 35: Deposit Approval / Rejection Handler
@@ -741,6 +750,26 @@ export default function AdminDashboard({ adminUser = {}, onImpersonate = () => {
       {/* Admin Navigation Tabs */}
       <div className="flex items-center gap-2 bg-slate-200/60 p-1.5 rounded-2xl overflow-x-auto">
         <button
+          onClick={() => setAdminTab('users')}
+          className={`px-4 py-2 rounded-xl text-xs font-extrabold transition-all flex items-center gap-2 shrink-0 cursor-pointer ${
+            adminTab === 'users' ? 'bg-emerald-600 text-white shadow-md' : 'text-slate-700 hover:bg-slate-300/50'
+          }`}
+        >
+          <Users className="w-4 h-4" />
+          <span>Traders & Impersonation ({users.length})</span>
+        </button>
+
+        <button
+          onClick={() => setAdminTab('kyc')}
+          className={`px-4 py-2 rounded-xl text-xs font-extrabold transition-all flex items-center gap-2 shrink-0 cursor-pointer ${
+            adminTab === 'kyc' ? 'bg-emerald-600 text-white shadow-md' : 'text-slate-700 hover:bg-slate-300/50'
+          }`}
+        >
+          <ShieldCheck className="w-4 h-4" />
+          <span>KYC Verifications ({kycRequests.filter(k => (k.status || '').toLowerCase() === 'pending').length})</span>
+        </button>
+
+        <button
           onClick={() => setAdminTab('analytics')}
           className={`px-4 py-2 rounded-xl text-xs font-extrabold transition-all flex items-center gap-2 shrink-0 cursor-pointer ${
             adminTab === 'analytics' ? 'bg-emerald-600 text-white shadow-md' : 'text-slate-700 hover:bg-slate-300/50'
@@ -768,26 +797,6 @@ export default function AdminDashboard({ adminUser = {}, onImpersonate = () => {
         >
           <Terminal className="w-4 h-4" />
           <span>Terminal & Risk Management</span>
-        </button>
-
-        <button
-          onClick={() => setAdminTab('users')}
-          className={`px-4 py-2 rounded-xl text-xs font-extrabold transition-all flex items-center gap-2 shrink-0 cursor-pointer ${
-            adminTab === 'users' ? 'bg-emerald-600 text-white shadow-md' : 'text-slate-700 hover:bg-slate-300/50'
-          }`}
-        >
-          <Users className="w-4 h-4" />
-          <span>Traders & Impersonation ({users.length})</span>
-        </button>
-
-        <button
-          onClick={() => setAdminTab('kyc')}
-          className={`px-4 py-2 rounded-xl text-xs font-extrabold transition-all flex items-center gap-2 shrink-0 cursor-pointer ${
-            adminTab === 'kyc' ? 'bg-emerald-600 text-white shadow-md' : 'text-slate-700 hover:bg-slate-300/50'
-          }`}
-        >
-          <ShieldCheck className="w-4 h-4" />
-          <span>KYC Verifications ({kycRequests.filter(k => (k.status || '').toLowerCase() === 'pending').length})</span>
         </button>
 
         <button
@@ -1185,7 +1194,7 @@ export default function AdminDashboard({ adminUser = {}, onImpersonate = () => {
                           placeholder="API Key"
                         />
                         <button
-                          onClick={() => alert(`Saved gateway settings for ${gw.name}`)}
+                          onClick={() => alertSuccess(`Saved gateway settings for ${gw.name}`)}
                           className="px-4 py-1.5 bg-emerald-600 text-white font-extrabold rounded-xl text-xs shadow-xs cursor-pointer"
                         >
                           Save

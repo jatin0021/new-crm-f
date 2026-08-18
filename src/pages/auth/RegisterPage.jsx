@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import { useAlert } from '../../context/AlertContext';
 import { Eye, EyeOff, Mail, User, Globe, Phone, Lock, Tag, AlertCircle, ArrowRight, Check, Sparkles } from 'lucide-react';
 import AuthLayout from '../../components/auth/AuthLayout';
 import PasswordStrengthBar from '../../components/common/PasswordStrengthBar';
 
 export default function RegisterPage({ onRegisterSuccess = () => {}, onNavigate = () => {} }) {
+  const { alertInfo } = useAlert();
   const [formData, setFormData] = useState({
     first_name: '',
     last_name: '',
@@ -386,7 +388,7 @@ export default function RegisterPage({ onRegisterSuccess = () => {}, onNavigate 
         {/* Google SSO Button */}
         <button
           type="button"
-          onClick={() => alert('Google SSO Authentication gateway initialized')}
+          onClick={() => alertInfo('Google SSO Authentication gateway initialized')}
           className="w-full py-2.5 px-4 bg-slate-200/90 hover:bg-white text-slate-900 font-bold text-xs sm:text-sm rounded-full transition-all flex items-center justify-center gap-2.5 shadow-md active:scale-[0.99] cursor-pointer"
         >
           <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useAlert } from '../../context/AlertContext';
 import { 
   Headset, 
   Ticket, 
@@ -17,6 +18,7 @@ import {
 } from 'lucide-react';
 
 export default function SupportHelpdeskPage() {
+  const { alertError } = useAlert();
   const [activeTab, setActiveTab] = useState('tickets'); // 'tickets' | 'new_ticket' | 'faq'
 
   // Tickets List State
@@ -134,10 +136,10 @@ export default function SupportHelpdeskPage() {
           setTicketSuccessMsg('');
         }, 1500);
       } else {
-        alert(data.message || 'Failed to submit ticket');
+        alertError(data.message || 'Failed to submit ticket');
       }
     } catch (err) {
-      alert('Server connection error');
+      alertError('Server connection error');
     } finally {
       setSubmittingTicket(false);
     }

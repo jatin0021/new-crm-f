@@ -23,11 +23,13 @@ import {
   Users,
   XCircle
 } from 'lucide-react';
+import { useAlert } from '../../context/AlertContext';
 import DepositGatewayDirectory from '../../components/common/DepositGatewayDirectory';
 import CregisModal from '../../components/common/CregisModal';
 import AddressBookModal from '../../components/common/AddressBookModal';
 
 export default function FundsPage() {
+  const { alertError, alertSuccess } = useAlert();
   const [activeTab, setActiveTab] = useState('deposit'); // 'deposit' | 'transfers' | 'withdrawal' | 'deposit_history' | 'withdrawal_history' | 'transfer_history'
 
   // Wallet State
@@ -223,11 +225,12 @@ export default function FundsPage() {
             locked_balance: Math.max(0, prev.locked_balance - amt)
           }));
         }
+        alertSuccess('Withdrawal request cancelled successfully.');
       } else {
-        alert(data.message || 'Cancellation failed');
+        alertError(data.message || 'Cancellation failed');
       }
     } catch (e) {
-      alert('Server connection error during cancellation');
+      alertError('Server connection error during cancellation');
     }
   };
 

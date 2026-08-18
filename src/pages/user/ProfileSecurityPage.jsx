@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useAlert } from '../../context/AlertContext';
 import { 
   User, 
   ShieldCheck, 
@@ -28,6 +29,7 @@ import TwoFactorAuthModal from '../../components/common/TwoFactorAuthModal';
 import ComplianceDocModal from '../../components/common/ComplianceDocModal';
 
 export default function ProfileSecurityPage({ defaultSubTab = 'profile' }) {
+  const { showAlert, alertSuccess, alertError, alertWarning, alertInfo } = useAlert();
   const [activeSubTab, setActiveSubTab] = useState(defaultSubTab);
 
   // Profile Form State
@@ -208,7 +210,7 @@ export default function ProfileSecurityPage({ defaultSubTab = 'profile' }) {
         setShow2FaSetup(true);
       }
     } catch (err) {
-      alert('Failed to initialize 2FA setup.');
+      alertError('Failed to initialize 2FA setup.');
     }
   };
 
@@ -316,11 +318,11 @@ export default function ProfileSecurityPage({ defaultSubTab = 'profile' }) {
   const handleSubmitKyc = async (e) => {
     e.preventDefault();
     if (!uploadFile) {
-      alert('Please select an image or document file to proceed with verification.');
+      alertWarning('Please select an image or document file to proceed with verification.');
       return;
     }
     if (uploadFile.size > 15 * 1024 * 1024) {
-      alert('File size exceeds maximum limit of 15MB.');
+      alertWarning('File size exceeds maximum limit of 15MB.');
       return;
     }
 
@@ -340,14 +342,14 @@ export default function ProfileSecurityPage({ defaultSubTab = 'profile' }) {
       const data = await res.json().catch(() => ({ message: `HTTP ${res.status} ${res.statusText}` }));
       if (res.ok && (data.ok || data.success || data.data)) {
         setKycStatus(data.data?.kyc_status || 'pending');
-        alert(`Document uploaded successfully! Category: ${manualDocCategory}`);
+        alertSuccess(`Document uploaded successfully! Category: ${manualDocCategory}`);
         setUploadFile(null);
         await fetchKycStatus();
       } else {
-        alert(data.message || data.error || 'KYC document upload failed.');
+        alertError(data.message || data.error || 'KYC document upload failed.');
       }
     } catch (err) {
-      alert(`Upload error: ${err.message || 'Network error'}`);
+      alertError(`Upload error: ${err.message || 'Network error'}`);
     } finally {
       setSubmittingKyc(false);
     }

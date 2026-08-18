@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
+import { useAlert } from '../../context/AlertContext';
 import { Eye, EyeOff, Mail, Phone, Lock, AlertCircle, ArrowRight, User, CheckSquare, Square } from 'lucide-react';
 import AuthLayout from '../../components/auth/AuthLayout';
 import { API_BASE_URL } from '../../config/api';
 
 export default function LoginPage({ onLoginSuccess = () => {}, onNavigate = () => {} }) {
+  const { alertInfo } = useAlert();
   const [activeLoginTab, setActiveLoginTab] = useState('email'); // 'email' or 'phone'
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -240,7 +242,7 @@ export default function LoginPage({ onLoginSuccess = () => {}, onNavigate = () =
         {/* Google SSO Button */}
         <button
           type="button"
-          onClick={() => alert('Google SSO Authentication gateway initialized')}
+          onClick={() => alertInfo('Google SSO Authentication gateway initialized')}
           className="w-full py-3 px-4 bg-slate-200/90 hover:bg-white text-slate-900 font-bold text-xs sm:text-sm rounded-full transition-all flex items-center justify-center gap-2.5 shadow-md active:scale-[0.99] cursor-pointer"
         >
           <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
