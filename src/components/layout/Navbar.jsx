@@ -246,8 +246,22 @@ export default function Navbar({ activeTab = 'Home', setActiveTab = () => {}, cu
                       <p className="text-xs font-black text-slate-900 truncate">
                         {currentUser?.first_name || 'Trader'} {currentUser?.last_name || ''}
                       </p>
-                      <span className="text-[9px] font-black uppercase px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded-full border border-emerald-200/60">
-                        {currentUser?.kyc_status === 'verified' ? 'Verified' : 'Verified'}
+                      <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full border ${
+                        (currentUser?.kyc_status || '').toLowerCase() === 'verified'
+                          ? 'bg-emerald-100 text-emerald-800 border-emerald-200/60'
+                          : (currentUser?.kyc_status || '').toLowerCase() === 'pending'
+                          ? 'bg-amber-100 text-amber-800 border-amber-200/60 animate-pulse'
+                          : (currentUser?.kyc_status || '').toLowerCase() === 'rejected'
+                          ? 'bg-rose-100 text-rose-800 border-rose-200/60'
+                          : 'bg-slate-100 text-slate-700 border-slate-200/60'
+                      }`}>
+                        {(currentUser?.kyc_status || '').toLowerCase() === 'verified'
+                          ? 'Verified ✅'
+                          : (currentUser?.kyc_status || '').toLowerCase() === 'pending'
+                          ? 'Pending ⏳'
+                          : (currentUser?.kyc_status || '').toLowerCase() === 'rejected'
+                          ? 'Rejected ❌'
+                          : 'Not Verified'}
                       </span>
                     </div>
 

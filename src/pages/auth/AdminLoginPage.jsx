@@ -40,6 +40,9 @@ export default function AdminLoginPage({ onAdminLoginSuccess = () => {}, onNavig
       if (email === 'admin@vintagecrm.com' && (password === 'admin123' || password === 'password123')) {
         const demoAdmin = { id: 1, name: 'Super Admin', email: 'admin@vintagecrm.com', role: 'super_admin' };
         localStorage.setItem('crm_admin_user', JSON.stringify(demoAdmin));
+        if (!localStorage.getItem('crm_admin_token')) {
+          localStorage.setItem('crm_admin_token', localStorage.getItem('crm_jwt_token') || 'demo_admin_token');
+        }
         onAdminLoginSuccess(demoAdmin);
       } else {
         setErrorMessage(err.message || 'Server connection error. Please ensure backend server is active.');

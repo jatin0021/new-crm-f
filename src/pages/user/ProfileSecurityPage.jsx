@@ -71,14 +71,13 @@ export default function ProfileSecurityPage({ defaultSubTab = 'profile' }) {
     { id: 2, ip_address: '198.51.100.42', user_agent: 'Safari iOS (iPhone 15)', device_info: 'iPhone Workstation', last_active: '2 hours ago', is_current: false }
   ]);
 
-  // KYC State
+  // KYC State (Manual Document Upload)
   const [kycStatus, setKycStatus] = useState('unverified'); // 'unverified' | 'pending' | 'action_required' | 'verified' | 'rejected'
-  const [docType, setDocType] = useState('passport');
-  const [idUploaded, setIdUploaded] = useState(false);
-  const [poaUploaded, setPoaUploaded] = useState(false);
-  const [livenessDone, setLivenessDone] = useState(false);
   const [submittingKyc, setSubmittingKyc] = useState(false);
-  const [ocrResult, setOcrResult] = useState(null);
+  const [uploadFile, setUploadFile] = useState(null);
+  const [manualDocCategory, setManualDocCategory] = useState('Proof of Identity');
+  const [manualIdType, setManualIdType] = useState('ID Card');
+  const [manualDocsList, setManualDocsList] = useState([]);
 
   // Compliance Doc Modal State
   const [activeDocType, setActiveDocType] = useState(null);
@@ -88,7 +87,38 @@ export default function ProfileSecurityPage({ defaultSubTab = 'profile' }) {
     'Canada', 'Australia', 'Singapore', 'France', 'Saudi Arabia', 'Japan', 'India'
   ];
 
-  // Fetch Profile & KYC Status on Mount
+  // Helper to fetch KYC documents and status
+  const fetchKycStatus = async () => {
+    try {
+      const token = localStorage.getItem('crm_jwt_token') || sessionStorage.getItem('crm_jwt_token');
+      const kycRes = await fetch('/api/kyc/status', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (kycRes.ok) {
+        const kycData = await kycRes.json();
+        if (kycData.data?.kyc_status) {
+          setKycStatus(kycData.data.kyc_status);
+          setManualDocsList(kycData.data.manual_documents || []);
+
+          // Sync crm_user in localStorage so live account creation checks pick up verified status immediately
+          const userStr = localStorage.getItem('crm_user');
+          if (userStr) {
+            try {
+              const u = JSON.parse(userStr);
+              if (u.kyc_status !== kycData.data.kyc_status) {
+                u.kyc_status = kycData.data.kyc_status;
+                localStorage.setItem('crm_user', JSON.stringify(u));
+              }
+            } catch (err) {}
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('KYC fetch warning:', e.message);
+    }
+  };
+
+  // Fetch Profile & KYC Status on Mount & Poll Every 3 Seconds for Real-Time Approval Updates
   useEffect(() => {
     const fetchProfileData = async () => {
       try {
@@ -102,6 +132,13 @@ export default function ProfileSecurityPage({ defaultSubTab = 'profile' }) {
             setProfile(prev => ({ ...prev, ...data.data.profile }));
             setKycStatus(data.data.profile.kyc_status || 'unverified');
           }
+          await fetchKycStatus();
+        } else if (res.status === 404 || res.status === 401 || res.status === 403) {
+          localStorage.removeItem('crm_user');
+          localStorage.removeItem('crm_jwt_token');
+          sessionStorage.removeItem('crm_user');
+          sessionStorage.removeItem('crm_jwt_token');
+          window.location.href = '/login';
         }
       } catch (e) {
         console.warn('Profile fetch warning:', e.message);
@@ -109,6 +146,12 @@ export default function ProfileSecurityPage({ defaultSubTab = 'profile' }) {
     };
 
     fetchProfileData();
+    const interval = setInterval(() => {
+      fetchProfileData();
+      fetchKycStatus();
+    }, 3000);
+
+    return () => clearInterval(interval);
   }, []);
 
   // 1. Profile Save Handler
@@ -269,28 +312,45 @@ export default function ProfileSecurityPage({ defaultSubTab = 'profile' }) {
     setSessions(prev => prev.filter(s => s.is_current));
   };
 
-  // 5. Submit KYC Documents Handler
+  // 5. Submit KYC Documents Handler (Manual Document Upload)
   const handleSubmitKyc = async (e) => {
     e.preventDefault();
-    setSubmittingKyc(true);
-    
-    // Simulate AI OCR Extraction & Biometric Liveness Result
-    setTimeout(() => {
-      setOcrResult({
-        name: `${profile.first_name || 'John'} ${profile.last_name || 'Doe'}`,
-        doc_type: docType.toUpperCase(),
-        dob: profile.date_of_birth || '1992-05-14',
-        match_score: '99.8%'
-      });
-      setKycStatus('pending');
-      setSubmittingKyc(false);
-    }, 1500);
-  };
+    if (!uploadFile) {
+      alert('Please select an image or document file to proceed with verification.');
+      return;
+    }
+    if (uploadFile.size > 15 * 1024 * 1024) {
+      alert('File size exceeds maximum limit of 15MB.');
+      return;
+    }
 
-  // Sumsub WebSDK Launcher
-  const handleLaunchSumsubSdk = async () => {
-    alert('Sumsub WebSDK Automated AI Verification Modal Initialized!\nAccess Token generated for basic-kyc-level.');
-    setKycStatus('pending');
+    setSubmittingKyc(true);
+    try {
+      const token = localStorage.getItem('crm_jwt_token') || sessionStorage.getItem('crm_jwt_token');
+      const formData = new FormData();
+      formData.append('file', uploadFile);
+      formData.append('documentType', manualDocCategory);
+      formData.append('idType', manualIdType);
+
+      const res = await fetch('/api/kyc/upload', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: formData
+      });
+      const data = await res.json().catch(() => ({ message: `HTTP ${res.status} ${res.statusText}` }));
+      if (res.ok && (data.ok || data.success || data.data)) {
+        setKycStatus(data.data?.kyc_status || 'pending');
+        alert(`Document uploaded successfully! Category: ${manualDocCategory}`);
+        setUploadFile(null);
+        await fetchKycStatus();
+      } else {
+        alert(data.message || data.error || 'KYC document upload failed.');
+      }
+    } catch (err) {
+      alert(`Upload error: ${err.message || 'Network error'}`);
+    } finally {
+      setSubmittingKyc(false);
+    }
   };
 
   return (
@@ -759,7 +819,7 @@ export default function ProfileSecurityPage({ defaultSubTab = 'profile' }) {
       )}
 
       {/* ========================================================================= */}
-      {/* SUB-TAB 3: IDENTITY VERIFICATION (KYC & SUMSUB WEBSDK) */}
+      {/* SUB-TAB 3: IDENTITY VERIFICATION (MANUAL DOCUMENT UPLOAD) */}
       {/* ========================================================================= */}
       {activeSubTab === 'kyc' && (
         <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 card-shadow space-y-6 animate-in fade-in duration-200">
@@ -767,149 +827,146 @@ export default function ProfileSecurityPage({ defaultSubTab = 'profile' }) {
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-100 pb-5">
             <div>
               <h2 className="text-xl font-black text-slate-900">Personal Identity Verification (KYC)</h2>
-              <p className="text-xs text-slate-500 font-medium mt-0.5">Verify your identity to lift account deposit limits and activate live MT5 trading.</p>
+              <p className="text-xs text-slate-500 font-medium mt-0.5">Upload official proof of identity or proof of address documents for manual compliance review.</p>
             </div>
 
-            {/* Sumsub WebSDK Button */}
-            <button
-              onClick={handleLaunchSumsubSdk}
-              className="px-4 py-2 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-extrabold text-xs rounded-full shadow-md transition-all cursor-pointer flex items-center gap-1.5 shrink-0"
-            >
-              <ExternalLink className="w-4 h-4" />
-              <span>Launch Sumsub WebSDK</span>
-            </button>
+            <div className="flex items-center gap-2">
+              <span className={`px-3.5 py-1.5 rounded-full text-xs font-black uppercase tracking-wider ${
+                ['verified', 'approved'].includes(kycStatus.toLowerCase())
+                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                  : kycStatus === 'pending'
+                  ? 'bg-amber-50 text-amber-700 border border-amber-200 animate-pulse'
+                  : kycStatus === 'rejected'
+                  ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                  : 'bg-slate-100 text-slate-700 border border-slate-200'
+              }`}>
+                KYC Status: {kycStatus}
+              </span>
+            </div>
           </div>
 
-          {kycStatus === 'pending' && (
-            <div className="p-6 text-center bg-amber-50 rounded-3xl border border-amber-200 space-y-2 animate-in fade-in">
-              <AlertCircle className="w-12 h-12 text-amber-600 mx-auto" />
-              <h3 className="text-lg font-black text-amber-950">Verification Review in Progress</h3>
-              <p className="text-xs font-semibold text-amber-800 max-w-md mx-auto">
-                Your Government ID and Proof of Address documents are under compliance review. Review usually completes within 15–30 minutes.
-              </p>
-              {ocrResult && (
-                <div className="mt-3 p-3 bg-white rounded-xl border border-amber-200 text-left text-xs font-mono space-y-1 max-w-sm mx-auto">
-                  <span className="text-[10px] text-slate-400 block uppercase font-bold">AI OCR Extraction Result:</span>
-                  <p className="text-slate-800">Match Name: <strong>{ocrResult.name}</strong></p>
-                  <p className="text-slate-800">Doc Type: <strong>{ocrResult.doc_type}</strong></p>
-                  <p className="text-slate-800">Liveness Match: <strong>{ocrResult.match_score}</strong></p>
-                </div>
-              )}
+          {/* MANUAL DOCUMENT UPLOAD FORM CARD */}
+          <div className="bg-slate-50 border border-slate-200/80 rounded-3xl p-6 sm:p-8 space-y-6">
+            <div className="flex items-center gap-3 border-b border-slate-200/60 pb-4">
+              <div className="w-10 h-10 rounded-2xl bg-emerald-600 text-white flex items-center justify-center font-bold shadow-md">
+                <FileText className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-black text-slate-900">Document Upload Portal</h3>
+                <p className="text-xs text-slate-500 font-medium">Supported formats: JPG, PNG, PDF (Max file size: 5MB)</p>
+              </div>
             </div>
-          )}
 
-          {kycStatus !== 'pending' && (
-            <form onSubmit={handleSubmitKyc} className="space-y-6 text-left">
+            <form onSubmit={handleSubmitKyc} className="space-y-5">
               
-              {/* Document Type Selection */}
-              <div className="space-y-2.5">
-                <label className="text-xs font-extrabold text-slate-700 block uppercase tracking-wider">
-                  1. Select Government ID Type
-                </label>
-                <div className="grid grid-cols-3 gap-3">
-                  {['passport', 'id', 'license'].map(type => (
-                    <button
-                      key={type}
-                      type="button"
-                      onClick={() => setDocType(type)}
-                      className={`py-3 px-3 rounded-2xl border text-xs font-extrabold capitalize transition-all cursor-pointer ${
-                        docType === type ? 'border-emerald-600 bg-emerald-50 text-emerald-800 ring-2 ring-emerald-500/20' : 'border-slate-200 text-slate-600 bg-white'
-                      }`}
-                    >
-                      {type === 'passport' ? 'Passport' : type === 'id' ? 'National ID Card' : 'Driver License'}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* ID Photo Upload */}
-              <div className="space-y-2.5">
-                <label className="text-xs font-extrabold text-slate-700 block uppercase tracking-wider">
-                  2. Upload Front & Back ID Photos
-                </label>
-                <div 
-                  onClick={() => setIdUploaded(true)}
-                  className={`border-2 border-dashed rounded-3xl p-6 text-center cursor-pointer transition-all ${
-                    idUploaded ? 'border-emerald-500 bg-emerald-50/60' : 'border-slate-300 hover:border-emerald-400 bg-slate-50'
-                  }`}
-                >
-                  {idUploaded ? (
-                    <div className="flex items-center justify-center gap-2 text-emerald-700 font-bold text-xs">
-                      <Check className="w-5 h-5 text-emerald-600" />
-                      <span>{docType.toUpperCase()} Photo Attached & AI OCR Text Extracted</span>
-                    </div>
-                  ) : (
-                    <>
-                      <Camera className="w-8 h-8 text-emerald-600 mx-auto mb-2" />
-                      <p className="text-xs font-extrabold text-slate-800">Click to upload photo or capture via camera</p>
-                      <p className="text-[10px] text-slate-400 mt-1">Supports JPG, PNG, PDF up to 10MB</p>
-                    </>
-                  )}
-                </div>
-              </div>
-
-              {/* Biometric Liveness Check */}
-              <div className="space-y-2.5">
-                <label className="text-xs font-extrabold text-slate-700 block uppercase tracking-wider">
-                  3. Biometric Camera Liveness Check
-                </label>
-                <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <Camera className="w-5 h-5 text-emerald-600 shrink-0" />
-                    <div>
-                      <h4 className="text-xs font-extrabold text-slate-900">3D Facial Biometric Scan</h4>
-                      <p className="text-[10px] text-slate-400">Position your face in front of the camera for 3 seconds.</p>
-                    </div>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => setLivenessDone(true)}
-                    className={`px-3.5 py-1.5 rounded-full text-xs font-extrabold transition-all cursor-pointer ${
-                      livenessDone ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
-                    }`}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs font-extrabold text-slate-700 block mb-1.5 uppercase tracking-wider">1. Document Category *</label>
+                  <select
+                    value={manualDocCategory}
+                    onChange={(e) => setManualDocCategory(e.target.value)}
+                    className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:border-emerald-500 focus:outline-none transition-all cursor-pointer"
                   >
-                    {livenessDone ? 'Liveness Match 99.8%' : 'Start Liveness Check'}
-                  </button>
+                    <option value="Proof of Identity">Proof of Identity</option>
+                    <option value="Proof of Address">Proof of Address</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-xs font-extrabold text-slate-700 block mb-1.5 uppercase tracking-wider">2. Document Type *</label>
+                  <select
+                    value={manualIdType}
+                    onChange={(e) => setManualIdType(e.target.value)}
+                    className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:border-emerald-500 focus:outline-none transition-all cursor-pointer"
+                  >
+                    {manualDocCategory === 'Proof of Identity' ? (
+                      <>
+                        <option value="ID Card">National ID Card</option>
+                        <option value="Passport">Passport</option>
+                        <option value="Driver License">Driver License</option>
+                      </>
+                    ) : (
+                      <>
+                        <option value="Utility Bill">Utility Bill</option>
+                        <option value="Bank Statement">Bank Statement</option>
+                        <option value="Tax Document">Tax Document</option>
+                        <option value="Passport">Passport</option>
+                        <option value="ID Card">ID Card</option>
+                      </>
+                    )}
+                  </select>
                 </div>
               </div>
 
-              {/* Proof of Address Upload */}
-              <div className="space-y-2.5">
-                <label className="text-xs font-extrabold text-slate-700 block uppercase tracking-wider">
-                  4. Proof of Residence (Utility Bill / Bank Statement)
-                </label>
-                <div 
-                  onClick={() => setPoaUploaded(true)}
-                  className={`border-2 border-dashed rounded-3xl p-6 text-center cursor-pointer transition-all ${
-                    poaUploaded ? 'border-emerald-500 bg-emerald-50/60' : 'border-slate-300 hover:border-emerald-400 bg-slate-50'
-                  }`}
-                >
-                  {poaUploaded ? (
-                    <div className="flex items-center justify-center gap-2 text-emerald-700 font-bold text-xs">
-                      <Check className="w-5 h-5 text-emerald-600" />
-                      <span>Proof of Residence Attached (utility_bill.pdf)</span>
-                    </div>
-                  ) : (
-                    <>
-                      <FileText className="w-8 h-8 text-emerald-600 mx-auto mb-2" />
-                      <p className="text-xs font-extrabold text-slate-800">Upload document issued within last 3 months</p>
-                      <p className="text-[10px] text-slate-400 mt-1">Supports PDF, PNG up to 10MB</p>
-                    </>
-                  )}
+              <div>
+                <label className="text-xs font-extrabold text-slate-700 block mb-1.5 uppercase tracking-wider">3. Select File *</label>
+                <div className="relative border-2 border-dashed border-slate-300 hover:border-emerald-500 rounded-2xl p-5 text-center bg-white transition-all">
+                  <input
+                    type="file"
+                    accept="image/*,.jpg,.jpeg,.png,.webp,.bmp,.gif,.pdf"
+                    onChange={(e) => setUploadFile(e.target.files[0])}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  />
+                  <div className="flex flex-col items-center justify-center gap-1.5">
+                    <FileText className="w-8 h-8 text-emerald-600" />
+                    {uploadFile ? (
+                      <div>
+                        <p className="text-xs font-black text-emerald-700">{uploadFile.name}</p>
+                        <p className="text-[10px] text-slate-400 font-mono">{(uploadFile.size / 1024 / 1024).toFixed(2)} MB</p>
+                      </div>
+                    ) : (
+                      <div>
+                        <p className="text-xs font-extrabold text-slate-800">Click or drag image / document to attach</p>
+                        <p className="text-[10px] text-slate-400 mt-0.5">Supports any image format (JPG, PNG, WEBP, GIF) & PDF up to 15MB</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 
               <button
                 type="submit"
                 disabled={submittingKyc}
-                className="w-full py-4 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 text-white font-black text-sm rounded-full transition-all shadow-lg shadow-emerald-600/25 active:scale-98 cursor-pointer disabled:opacity-50"
+                className="w-full py-3.5 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-700 hover:to-teal-700 text-white font-black text-xs rounded-xl shadow-md shadow-emerald-600/20 transition-all cursor-pointer disabled:opacity-50"
               >
-                {submittingKyc ? 'Uploading & Extracting OCR Data...' : 'Submit Verification Documents'}
+                {submittingKyc ? 'Uploading & Submitting...' : 'Submit Verification Document'}
               </button>
 
             </form>
+          </div>
+
+          {/* SUBMITTED DOCUMENTS HISTORY LOG */}
+          {manualDocsList.length > 0 && (
+            <div className="space-y-3 pt-4 border-t border-slate-100">
+              <h4 className="text-xs font-black uppercase text-slate-700 tracking-wider">Submitted Document Log</h4>
+              <div className="divide-y divide-slate-100 bg-slate-50/50 rounded-2xl p-4 border border-slate-100">
+                {manualDocsList.map(doc => (
+                  <div key={doc.id} className="py-3 flex items-center justify-between text-xs">
+                    <div>
+                      <span className="font-extrabold text-slate-900">{doc.document_type} ({doc.id_type})</span>
+                      <span className="text-[10px] text-slate-400 block font-mono">Submitted: {new Date(doc.created_at).toLocaleDateString()}</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase ${
+                        doc.status === 'Approved' ? 'bg-emerald-100 text-emerald-800' : doc.status === 'Rejected' ? 'bg-rose-100 text-rose-800' : 'bg-amber-100 text-amber-800'
+                      }`}>
+                        {doc.status}
+                      </span>
+                      <a
+                        href={`/api/kyc/documents/${doc.id}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-emerald-600 hover:underline font-bold text-[11px] flex items-center gap-1"
+                      >
+                        <ExternalLink className="w-3 h-3" /> View
+                      </a>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
+
         </div>
       )}
 

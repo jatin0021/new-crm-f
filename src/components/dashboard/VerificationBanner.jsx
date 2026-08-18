@@ -1,63 +1,241 @@
-import React from 'react';
-import { ArrowRight, CreditCard, Sparkles, ShieldCheck } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { CheckCircle2, Clock, XCircle, AlertCircle, Lock, ArrowRight } from 'lucide-react';
 
-export default function VerificationBanner({ onVerify = () => {} }) {
+export default function VerificationBanner({ currentUser = null, onVerify = () => {} }) {
+  const [userProfile, setUserProfile] = useState(() => {
+    try {
+      return currentUser || JSON.parse(localStorage.getItem('crm_user') || '{}');
+    } catch (e) {
+      return {};
+    }
+  });
+
+  const [kycStatus, setKycStatus] = useState(() => {
+    try {
+      const u = currentUser || JSON.parse(localStorage.getItem('crm_user') || '{}');
+      return (u.kyc_status || 'unverified').toLowerCase();
+    } catch (e) {
+      return 'unverified';
+    }
+  });
+
+  const checkStatusAndProfile = async () => {
+    const token = localStorage.getItem('crm_jwt_token') || sessionStorage.getItem('crm_jwt_token');
+    if (!token) return;
+    try {
+      const [kycRes, profileRes] = await Promise.all([
+        fetch('/api/kyc/status', { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch('/api/user/profile', { headers: { 'Authorization': `Bearer ${token}` } })
+      ]);
+
+      if (kycRes.ok) {
+        const kycData = await kycRes.json();
+        if (kycData.data?.kyc_status) {
+          const newSt = kycData.data.kyc_status.toLowerCase();
+          setKycStatus(newSt);
+          try {
+            const userObj = JSON.parse(localStorage.getItem('crm_user') || '{}');
+            if (userObj.kyc_status !== newSt) {
+              userObj.kyc_status = newSt;
+              localStorage.setItem('crm_user', JSON.stringify(userObj));
+            }
+          } catch (err) {}
+        }
+      }
+
+      if (profileRes.ok) {
+        const profData = await profileRes.json();
+        if (profData.data?.profile) {
+          setUserProfile(prev => ({ ...prev, ...profData.data.profile }));
+        }
+      }
+    } catch (e) {
+      console.warn('Dashboard banner sync warning:', e.message);
+    }
+  };
+
+  useEffect(() => {
+    checkStatusAndProfile();
+    const interval = setInterval(checkStatusAndProfile, 3000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const firstName = userProfile?.first_name || userProfile?.name?.split(' ')[0] || 'Trader';
+  const lastName = userProfile?.last_name || userProfile?.name?.split(' ').slice(1).join(' ') || '';
+  const fullName = `${firstName} ${lastName}`.trim();
+
+  const getProgressPercentage = () => {
+    switch (kycStatus) {
+      case 'verified':
+        return 100;
+      case 'pending':
+        return 50;
+      case 'rejected':
+        return 25;
+      case 'unverified':
+      default:
+        return 25;
+    }
+  };
+
+  const percentage = getProgressPercentage();
+  const radius = 32;
+  const circumference = 2 * Math.PI * radius;
+  const strokeDashoffset = circumference - (percentage / 100) * circumference;
+
+  const getChecklist = () => {
+    switch (kycStatus) {
+      case 'verified':
+        return [
+          { label: 'Account opened', status: 'done' },
+          { label: 'Compliance', status: 'done' },
+          { label: 'Legal & Bank verified', status: 'done' },
+          { label: 'Trading enabled', status: 'done' }
+        ];
+      case 'pending':
+        return [
+          { label: 'Account opened', status: 'done' },
+          { label: 'Compliance review', status: 'pending' },
+          { label: 'Legal & Bank pending', status: 'pending' },
+          { label: 'Trading restricted', status: 'locked' }
+        ];
+      case 'rejected':
+        return [
+          { label: 'Account opened', status: 'done' },
+          { label: 'Compliance rejected', status: 'rejected' },
+          { label: 'Resubmission needed', status: 'rejected' },
+          { label: 'Trading restricted', status: 'locked' }
+        ];
+      case 'unverified':
+      default:
+        return [
+          { label: 'Account opened', status: 'done' },
+          { label: 'Compliance required', status: 'action' },
+          { label: 'Legal & Bank unverified', status: 'action' },
+          { label: 'Trading restricted', status: 'locked' }
+        ];
+    }
+  };
+
+  const checklist = getChecklist();
+
   return (
-    <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-950 via-emerald-950 to-teal-950 text-white p-6 sm:p-7 shadow-xl border border-emerald-500/25">
-      {/* Background Ambient Glows */}
-      <div className="absolute right-6 -top-16 w-80 h-80 bg-emerald-500/25 rounded-full blur-3xl pointer-events-none animate-pulse"></div>
-      <div className="absolute left-1/3 -bottom-16 w-64 h-64 bg-cyan-500/20 rounded-full blur-3xl pointer-events-none"></div>
+    <div className="rounded-3xl bg-gradient-to-r from-slate-900 via-slate-950 to-emerald-950 text-white border border-emerald-500/30 p-6 sm:p-7 shadow-xl relative overflow-hidden transition-all hover:shadow-2xl hover:border-emerald-400">
+      {/* Ambient Decorative Glow */}
+      <div className="absolute right-0 bottom-0 w-80 h-80 bg-gradient-to-tl from-emerald-500/15 to-transparent rounded-full blur-2xl pointer-events-none" />
 
-      <div className="flex flex-col md:flex-row items-center justify-between gap-6 relative z-10">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
         
-        {/* Left Side: Illustration Icon & Text */}
-        <div className="flex items-center gap-4 sm:gap-6 w-full md:w-auto">
-          {/* Card / Graphic Icon */}
-          <div className="relative shrink-0">
-            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-br from-emerald-400 via-teal-500 to-cyan-500 p-[2px] shadow-lg shadow-emerald-500/30 flex items-center justify-center transform -rotate-1 hover:rotate-0 transition-all duration-300">
-              <div className="w-full h-full bg-slate-950/90 backdrop-blur-md rounded-[14px] flex items-center justify-center relative overflow-hidden">
-                <CreditCard className="w-8 h-8 sm:w-10 sm:h-10 text-emerald-400" />
-                <div className="absolute -top-1 -right-1 w-6 h-6 bg-cyan-400 rounded-full border-2 border-slate-950 flex items-center justify-center font-black text-[11px] text-slate-950 shadow-md">
-                  ✓
-                </div>
-              </div>
-            </div>
-            <Sparkles className="w-4 h-4 text-emerald-300 absolute -top-1 -left-1 animate-pulse" />
-          </div>
+        {/* Left Side: Greeting & Subtitle */}
+        <div className="space-y-2 max-w-xl">
+          <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight flex items-center gap-2.5">
+            <span className="text-2xl sm:text-3xl">👋</span>
+            <span>Hello {fullName}</span>
+          </h2>
+          <p className="text-xs sm:text-sm text-emerald-100/90 font-medium leading-relaxed">
+            Welcome to your dashboard. Here you can review balances, switch accounts, and jump to deposits or trading.
+          </p>
 
-          {/* Heading and Subtext */}
-          <div className="space-y-1.5">
-            <div className="flex items-center gap-2">
-              <span className="px-3 py-0.5 bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-black rounded-full uppercase tracking-wider flex items-center gap-1">
-                <ShieldCheck className="w-3 h-3 text-emerald-400" /> KYC Verification Required
-              </span>
+          {kycStatus !== 'verified' && (
+            <div className="pt-2">
+              <button
+                onClick={onVerify}
+                className={`px-4.5 py-2 text-xs font-extrabold rounded-full transition-all flex items-center gap-2 cursor-pointer ${
+                  kycStatus === 'pending'
+                    ? 'bg-amber-400/20 text-amber-200 border border-amber-400/40 hover:bg-amber-400/30'
+                    : kycStatus === 'rejected'
+                    ? 'bg-rose-400/20 text-rose-200 border border-rose-400/40 hover:bg-rose-400/30'
+                    : 'bg-gradient-to-r from-emerald-400 to-teal-400 hover:from-emerald-300 hover:to-teal-300 text-slate-950 font-black shadow-lg shadow-emerald-500/25'
+                }`}
+              >
+                <span>
+                  {kycStatus === 'pending'
+                    ? 'Check Verification Status'
+                    : kycStatus === 'rejected'
+                    ? 'Re-upload KYC Documents'
+                    : 'Complete Identity Verification'}
+                </span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
             </div>
-            <h2 className="text-xl sm:text-2xl font-black tracking-tight text-white">
-              Complete Account Identity Verification
-            </h2>
-            <p className="text-xs sm:text-sm text-slate-300 font-medium leading-relaxed">
-              Verify your profile today to unlock live MT5 trading and remove the default{' '}
-              <span className="font-bold text-cyan-300 bg-cyan-500/15 px-2 py-0.5 rounded-md border border-cyan-400/30 font-mono">
-                $5,000 deposit cap
-              </span>
-            </p>
-          </div>
+          )}
         </div>
 
-        {/* Right Side: CTA Button */}
-        <div className="w-full md:w-auto flex justify-end shrink-0">
-          <button
-            onClick={onVerify}
-            className="w-full md:w-auto px-7 py-3 bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-slate-950 font-extrabold text-xs sm:text-sm rounded-full transition-all duration-200 shadow-lg shadow-emerald-500/25 hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-2 group cursor-pointer"
-          >
-            <span>Verify Profile Now</span>
-            <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-          </button>
+        {/* Right Side: Circular Progress Ring & Vertical Checklist */}
+        <div className="flex items-center gap-5 sm:gap-6 shrink-0 bg-slate-950/40 backdrop-blur-md p-4 sm:p-5 rounded-2xl border border-white/10 shadow-inner relative z-10">
+          
+          {/* Circular SVG Gauge */}
+          <div className="relative w-20 h-20 sm:w-24 sm:h-24 flex items-center justify-center shrink-0">
+            <svg className="w-full h-full transform -rotate-90" viewBox="0 0 80 80">
+              <circle
+                cx="40"
+                cy="40"
+                r={radius}
+                className="stroke-white/10"
+                strokeWidth="6"
+                fill="transparent"
+              />
+              <circle
+                cx="40"
+                cy="40"
+                r={radius}
+                className={`transition-all duration-1000 ease-out ${
+                  percentage === 100
+                    ? 'stroke-emerald-400'
+                    : percentage === 50
+                    ? 'stroke-amber-400'
+                    : percentage === 25 && kycStatus === 'rejected'
+                    ? 'stroke-rose-400'
+                    : 'stroke-teal-400'
+                }`}
+                strokeWidth="6"
+                strokeDasharray={circumference}
+                strokeDashoffset={strokeDashoffset}
+                strokeLinecap="round"
+                fill="transparent"
+              />
+            </svg>
+
+            <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+              <span className="text-base sm:text-lg font-black text-white font-sans tracking-tight">
+                {percentage}%
+              </span>
+              <span className="text-[8px] sm:text-[9px] font-black text-emerald-300 tracking-wider uppercase">
+                STATUS
+              </span>
+            </div>
+          </div>
+
+          {/* Vertical Checklist */}
+          <div className="space-y-1.5 text-xs font-semibold">
+            {checklist.map((item, idx) => (
+              <div key={idx} className="flex items-center gap-2">
+                {item.status === 'done' && <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />}
+                {item.status === 'pending' && <Clock className="w-4 h-4 text-amber-400 animate-pulse shrink-0" />}
+                {item.status === 'rejected' && <XCircle className="w-4 h-4 text-rose-400 shrink-0" />}
+                {item.status === 'action' && <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />}
+                {item.status === 'locked' && <Lock className="w-4 h-4 text-slate-400 shrink-0" />}
+
+                <span
+                  className={
+                    item.status === 'done'
+                      ? 'text-white font-bold'
+                      : item.status === 'pending'
+                      ? 'text-amber-200 font-bold'
+                      : item.status === 'rejected'
+                      ? 'text-rose-200 font-bold'
+                      : 'text-slate-300/80'
+                  }
+                >
+                  {item.label}
+                </span>
+              </div>
+            ))}
+          </div>
+
         </div>
 
       </div>
     </div>
   );
 }
-
-

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Plus, 
+  PlusCircle,
   Shield, 
   Sliders, 
   Key, 
@@ -20,41 +21,18 @@ import {
   ArrowUpRight
 } from 'lucide-react';
 import ChangeAccountPasswordModal from '../../components/common/ChangeAccountPasswordModal';
+import { redirectIfUnverifiedKyc } from '../../shared/kycGate.js';
 
 export default function AccountsPage() {
   const [activeTab, setActiveTab] = useState('accounts'); // 'accounts' | 'create' | 'performance' | 'copy'
+  
+  // Demo Top-Up Modal State
+  const [showDemoTopUpModal, setShowDemoTopUpModal] = useState(null);
+  const [topUpAmount, setTopUpAmount] = useState(5000);
+  const [toppingUp, setToppingUp] = useState(false);
 
-  // Accounts Data
-  const [accounts, setAccounts] = useState([
-    { 
-      login: 501928, 
-      account_type: 'live', 
-      group_type: 'Standard ECN', 
-      leverage: '1:500', 
-      balance: 15400.50, 
-      equity: 15890.20, 
-      free_margin: 12400.00, 
-      margin_used: 3490.20,
-      margin_level_pct: 455.28,
-      floating_pnl: 489.70,
-      currency: 'USD', 
-      server: 'VintageLive-Server 1'
-    },
-    { 
-      login: 902817, 
-      account_type: 'demo', 
-      group_type: 'Demo Practice', 
-      leverage: '1:100', 
-      balance: 50000.00, 
-      equity: 50000.00, 
-      free_margin: 50000.00, 
-      margin_used: 0.00,
-      margin_level_pct: 9999.99,
-      floating_pnl: 0.00,
-      currency: 'USD', 
-      server: 'VintageDemo-Server 1'
-    }
-  ]);
+  // Accounts Data (Initially empty for new users)
+  const [accounts, setAccounts] = useState([]);
 
   // Account Creation Form State
   const [createForm, setCreateForm] = useState({
@@ -74,23 +52,17 @@ export default function AccountsPage() {
 
   // Trade Performance & Closed History State
   const [perfMetrics, setPerfMetrics] = useState({
-    total_trades: 5,
-    win_rate_pct: 80.0,
-    loss_rate_pct: 20.0,
-    net_profit: 1980.00,
-    profit_factor: 5.95,
-    total_lots: 5.10,
-    avg_win: 600.00,
-    avg_loss: 400.00
+    total_trades: 0,
+    win_rate_pct: 0.0,
+    loss_rate_pct: 0.0,
+    net_profit: 0.00,
+    profit_factor: 0.00,
+    total_lots: 0.00,
+    avg_win: 0.00,
+    avg_loss: 0.00
   });
 
-  const [closedTrades, setClosedTrades] = useState([
-    { id: 1001, deal_id: 8810291, login: 501928, symbol: 'EURUSD', action: 'BUY', volume_lots: 1.50, open_price: 1.08450, close_price: 1.08920, profit: 705.00, close_time: '2026-08-16 14:30' },
-    { id: 1002, deal_id: 8810292, login: 501928, symbol: 'GBPUSD', action: 'BUY', volume_lots: 1.00, open_price: 1.26100, close_price: 1.26750, profit: 650.00, close_time: '2026-08-15 11:15' },
-    { id: 1003, deal_id: 8810293, login: 501928, symbol: 'XAUUSD', action: 'SELL', volume_lots: 0.50, open_price: 2420.50, close_price: 2410.00, profit: 525.00, close_time: '2026-08-14 18:00' },
-    { id: 1004, deal_id: 8810294, login: 501928, symbol: 'BTCUSD', action: 'BUY', volume_lots: 0.10, open_price: 64200.00, close_price: 63800.00, profit: -400.00, close_time: '2026-08-13 09:45' },
-    { id: 1005, deal_id: 8810295, login: 501928, symbol: 'USDJPY', action: 'SELL', volume_lots: 2.00, open_price: 154.200, close_price: 153.800, profit: 520.00, close_time: '2026-08-12 16:20' }
-  ]);
+  const [closedTrades, setClosedTrades] = useState([]);
 
   // Copy Trading Strategy Providers
   const [copyProviders, setCopyProviders] = useState([
@@ -109,7 +81,7 @@ export default function AccountsPage() {
         });
         if (res.ok) {
           const data = await res.json();
-          if (data.data?.accounts && data.data.accounts.length > 0) {
+          if (data.data?.accounts) {
             setAccounts(data.data.accounts);
           }
         }
@@ -150,21 +122,43 @@ export default function AccountsPage() {
     setCreating(true);
     setCreateSuccessMsg('');
 
+    // Check KYC status for Live accounts
+    if (createForm.account_type === 'live') {
+      const userStr = localStorage.getItem('crm_user');
+      const user = userStr ? JSON.parse(userStr) : null;
+      const isBlocked = redirectIfUnverifiedKyc({
+        user,
+        onUnverified: (msg) => alert(`KYC Verification Required: ${msg}`)
+      });
+      if (isBlocked) {
+        setCreating(false);
+        return;
+      }
+    }
+
     try {
       const token = localStorage.getItem('crm_jwt_token') || sessionStorage.getItem('crm_jwt_token');
+      const isDemoChoice = createForm.account_type === 'demo';
+      const payload = {
+        ...createForm,
+        isDemo: isDemoChoice,
+        is_demo: isDemoChoice,
+        demoTopUp: createForm.initial_demo_balance || 10000
+      };
+
       const res = await fetch('/api/trading-accounts/create', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify(createForm)
+        body: JSON.stringify(payload)
       });
 
       const data = await res.json();
       if (res.ok && data.data?.account) {
         setAccounts(prev => [data.data.account, ...prev]);
-        setCreateSuccessMsg(`New MT5 ${createForm.account_type.toUpperCase()} Account #${data.data.account.login} provisioned successfully!`);
+        setCreateSuccessMsg(`New MT5 ${createForm.account_type.toUpperCase()} Account #${data.data.account.login || data.data.account.account_number} provisioned successfully!`);
         setTimeout(() => {
           setCreateSuccessMsg('');
           setActiveTab('accounts');
@@ -176,6 +170,43 @@ export default function AccountsPage() {
       alert('Server connection error during account creation.');
     } finally {
       setCreating(false);
+    }
+  };
+
+  // 3. Demo Top-Up Form Handler
+  const handleDemoTopUpSubmit = async (e) => {
+    e.preventDefault();
+    if (!showDemoTopUpModal) return;
+    setToppingUp(true);
+    try {
+      const token = localStorage.getItem('crm_jwt_token') || sessionStorage.getItem('crm_jwt_token');
+      const res = await fetch('/api/trading-accounts/demo-topup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          account_number: showDemoTopUpModal.account_number || showDemoTopUpModal.login,
+          amount: topUpAmount
+        })
+      });
+      const data = await res.json();
+      if (res.ok && data.data) {
+        alert(data.message || 'Demo account topped up successfully!');
+        setAccounts(prev => prev.map(a => 
+          (a.account_number === showDemoTopUpModal.account_number || a.login === showDemoTopUpModal.login)
+            ? { ...a, balance: data.data.new_balance, equity: data.data.new_balance, free_margin: data.data.new_balance }
+            : a
+        ));
+        setShowDemoTopUpModal(null);
+      } else {
+        alert(data.message || 'Failed to top up demo account.');
+      }
+    } catch (err) {
+      alert('Server connection error during demo top-up.');
+    } finally {
+      setToppingUp(false);
     }
   };
 
@@ -260,99 +291,167 @@ export default function AccountsPage() {
       {activeTab === 'accounts' && (
         <div className="space-y-6 animate-in fade-in duration-200">
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {accounts.map(acc => (
-              <div 
-                key={acc.login}
-                className="bg-white rounded-3xl p-6 border border-slate-200/80 card-shadow space-y-5 relative overflow-hidden group hover:border-emerald-300 transition-all"
-              >
-                {/* Account Top Row */}
-                <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-11 h-11 rounded-2xl bg-slate-900 text-emerald-400 font-mono font-black text-xs flex items-center justify-center p-0.5 shadow-md">
-                      MT5
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-black text-slate-900 text-base font-mono">#{acc.login}</span>
-                        <span className="text-[10px] font-bold text-slate-400 font-mono">({acc.currency || 'USD'})</span>
-                      </div>
-                      <p className="text-xs text-slate-500 font-semibold">{acc.group_type || 'Standard ECN'} • {acc.server || 'VintageLive-Server 1'}</p>
-                    </div>
-                  </div>
-
-                  <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
-                    acc.account_type === 'live' 
-                      ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' 
-                      : 'bg-cyan-50 text-cyan-700 border border-cyan-200'
-                  }`}>
-                    {acc.account_type === 'live' ? 'Live ECN' : 'Demo Practice'}
-                  </span>
-                </div>
-
-                {/* Account Financial & Margin Risk Metrics */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-50/80 rounded-2xl p-4 border border-slate-100">
-                  <div>
-                    <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Balance</span>
-                    <span className="text-sm font-black text-slate-900 font-mono mt-0.5 block">
-                      ${parseFloat(acc.balance || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                    </span>
-                  </div>
-
-                  <div>
-                    <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Equity</span>
-                    <span className="text-sm font-black text-emerald-600 font-mono mt-0.5 block">
-                      ${parseFloat(acc.equity || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                    </span>
-                  </div>
-
-                  <div>
-                    <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Free Margin</span>
-                    <span className="text-sm font-bold text-slate-800 font-mono mt-0.5 block">
-                      ${parseFloat(acc.free_margin || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                    </span>
-                  </div>
-
-                  <div>
-                    <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Leverage</span>
-                    <span className="text-xs font-black text-slate-800 mt-1 flex items-center gap-1 font-mono">
-                      <Sliders className="w-3.5 h-3.5 text-emerald-600" />
-                      {acc.leverage}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Additional Risk Gauge (Floating P&L & Margin Level %) */}
-                <div className="flex items-center justify-between text-xs font-semibold px-1 text-slate-500">
-                  <span>Floating P&L: <strong className={acc.floating_pnl >= 0 ? 'text-emerald-600 font-mono' : 'text-rose-600 font-mono'}>${acc.floating_pnl > 0 ? `+${acc.floating_pnl}` : acc.floating_pnl || '0.00'}</strong></span>
-                  <span>Margin Level: <strong className="text-slate-800 font-mono">{acc.margin_level_pct || '9999.99'}%</strong></span>
-                </div>
-
-                {/* Action Buttons Row */}
-                <div className="flex items-center gap-2 pt-1">
-                  {/* Single Sign-On (SSO) WebTrader Launcher Button */}
-                  <button
-                    onClick={() => handleLaunchWebTrader(acc.login)}
-                    className="flex-1 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold text-xs rounded-2xl transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
-                  >
-                    <ExternalLink className="w-3.5 h-3.5" />
-                    <span>Launch WebTrader (1-Click SSO)</span>
-                  </button>
-
-                  {/* Change Password Button */}
-                  <button
-                    onClick={() => setPasswordModalLogin(acc.login)}
-                    className="py-2.5 px-3.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs rounded-2xl transition-colors cursor-pointer flex items-center gap-1 border border-slate-200/80"
-                    title="Change Master or Investor Password"
-                  >
-                    <Key className="w-4 h-4 text-slate-600" />
-                  </button>
-                </div>
-
+          {accounts.length === 0 ? (
+            <div className="bg-white rounded-3xl p-8 sm:p-12 border border-slate-200/80 card-shadow text-center space-y-4">
+              <div className="w-16 h-16 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
+                <Cpu className="w-8 h-8 text-emerald-600" />
               </div>
-            ))}
-          </div>
+              <div className="max-w-md mx-auto">
+                <h3 className="text-lg font-black text-slate-900">No MT5 Trading Accounts Found</h3>
+                <p className="text-xs text-slate-500 mt-1 font-medium">You have not created any trading accounts yet. Open a Demo account to practice risk-free or submit your KYC verification to activate Live MT5 accounts.</p>
+              </div>
+              <button
+                onClick={() => setActiveTab('create')}
+                className="px-6 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-black text-xs rounded-xl shadow-md transition-all cursor-pointer inline-flex items-center gap-2"
+              >
+                <PlusCircle className="w-4 h-4" /> Open Your First Trading Account
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {accounts.map(acc => (
+                <div 
+                  key={acc.login || acc.id}
+                  className="bg-white rounded-3xl p-6 border border-slate-200/80 card-shadow space-y-5 relative overflow-hidden group hover:border-emerald-300 transition-all"
+                >
+                  {/* Account Top Row */}
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-11 h-11 rounded-2xl bg-slate-900 text-emerald-400 font-mono font-black text-xs flex items-center justify-center p-0.5 shadow-md">
+                        MT5
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-black text-slate-900 text-base font-mono">#{acc.login || acc.account_number}</span>
+                          <span className="text-[10px] font-bold text-slate-400 font-mono">({acc.currency || 'USD'})</span>
+                        </div>
+                        <p className="text-xs text-slate-500 font-semibold">{acc.group_type || acc.account_type || 'Standard ECN'} • {acc.server || 'VintageLive-Server 1'}</p>
+                      </div>
+                    </div>
 
+                    <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                      acc.account_type === 'live' 
+                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' 
+                        : 'bg-cyan-50 text-cyan-700 border border-cyan-200'
+                    }`}>
+                      {acc.account_type === 'live' ? 'Live ECN' : 'Demo Practice'}
+                    </span>
+                  </div>
+
+                  {/* Account Financial & Margin Risk Metrics */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-50/80 rounded-2xl p-4 border border-slate-100">
+                    <div>
+                      <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Balance</span>
+                      <span className="text-sm font-black text-slate-900 font-mono mt-0.5 block">
+                        ${parseFloat(acc.balance || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                      </span>
+                    </div>
+
+                    <div>
+                      <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Equity</span>
+                      <span className="text-sm font-black text-emerald-600 font-mono mt-0.5 block">
+                        ${parseFloat(acc.equity || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                      </span>
+                    </div>
+
+                    <div>
+                      <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Free Margin</span>
+                      <span className="text-sm font-bold text-slate-800 font-mono mt-0.5 block">
+                        ${parseFloat(acc.free_margin || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                      </span>
+                    </div>
+
+                    <div>
+                      <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Leverage</span>
+                      <span className="text-xs font-black text-slate-800 mt-1 flex items-center gap-1 font-mono">
+                        <Sliders className="w-3.5 h-3.5 text-emerald-600" />
+                        {acc.leverage}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Single Sign-On WebTrader Action */}
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => handleLaunchWebTrader(acc.login || acc.account_number)}
+                      className="flex-1 py-3 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-700 hover:to-teal-700 text-white font-extrabold text-xs rounded-2xl shadow-md transition-all cursor-pointer flex items-center justify-center gap-2 group-hover:scale-[1.01]"
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                      <span>Launch WebTrader (1-Click SSO)</span>
+                    </button>
+
+                    {(acc.is_demo || acc.account_type === 'demo' || (acc.group_type && acc.group_type.toLowerCase().includes('demo'))) && (
+                      <button
+                        onClick={() => {
+                          setShowDemoTopUpModal(acc);
+                          setTopUpAmount(5000);
+                        }}
+                        className="px-3.5 py-3 bg-cyan-50 hover:bg-cyan-100 text-cyan-700 font-black text-xs rounded-2xl border border-cyan-200 transition-all cursor-pointer flex items-center gap-1 shrink-0"
+                        title="Instant Virtual Funds Top-Up"
+                      >
+                        <DollarSign className="w-4 h-4" />
+                        <span>Top Up</span>
+                      </button>
+                    )}
+
+                    <button 
+                      onClick={() => setPasswordModalLogin(acc.login || acc.account_number)}
+                      className="p-3 bg-slate-100 hover:bg-slate-200 rounded-2xl transition-all cursor-pointer"
+                      title="Change Master or Investor Password"
+                    >
+                      <Key className="w-4 h-4 text-slate-600" />
+                    </button>
+                  </div>
+
+                </div>
+              ))}
+            </div>
+          )}
+
+        </div>
+      )}
+
+      {/* Demo TopUp Modal */}
+      {showDemoTopUpModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full border border-slate-200 shadow-2xl space-y-5 animate-in zoom-in-95">
+            <div>
+              <h3 className="text-lg font-black text-slate-900">Top Up Demo Account #{showDemoTopUpModal.account_number || showDemoTopUpModal.login}</h3>
+              <p className="text-xs text-slate-500 mt-1 font-medium">Inject virtual funds into your demo practice balance.</p>
+            </div>
+
+            <form onSubmit={handleDemoTopUpSubmit} className="space-y-4">
+              <div>
+                <label className="text-xs font-extrabold text-slate-700 block mb-1">Top-Up Amount ($USD)</label>
+                <input
+                  type="number"
+                  min="100"
+                  max="10000000"
+                  value={topUpAmount}
+                  onChange={(e) => setTopUpAmount(parseFloat(e.target.value) || 0)}
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:bg-white focus:border-cyan-500 focus:outline-none"
+                  required
+                />
+              </div>
+
+              <div className="flex items-center gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowDemoTopUpModal(null)}
+                  className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-xl cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={toppingUp}
+                  className="flex-1 py-2.5 bg-cyan-600 hover:bg-cyan-700 text-white font-extrabold text-xs rounded-xl cursor-pointer shadow-md disabled:opacity-50"
+                >
+                  {toppingUp ? 'Processing Top-Up...' : 'Confirm Top-Up'}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 

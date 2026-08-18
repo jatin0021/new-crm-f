@@ -32,18 +32,15 @@ export default function FundsPage() {
 
   // Wallet State
   const [wallet, setWallet] = useState({
-    wallet_number: 'W-90182',
-    total_balance: 2500.00,
-    available_balance: 2500.00,
+    wallet_number: '',
+    total_balance: 0.00,
+    available_balance: 0.00,
     locked_balance: 0.00,
     currency: 'USD'
   });
 
   // User Accounts List
-  const [accounts, setAccounts] = useState([
-    { login: 501928, type: 'Live Standard ECN', balance: 15400.50, free_margin: 12400.00, currency: 'USD' },
-    { login: 725249, type: 'Live VIP ECN', balance: 0.00, free_margin: 0.00, currency: 'EUR' }
-  ]);
+  const [accounts, setAccounts] = useState([]);
 
   // Deposit Form State
   const [selectedGateway, setSelectedGateway] = useState('usdt_trc20');
@@ -55,10 +52,7 @@ export default function FundsPage() {
   const [showCregisModal, setShowCregisModal] = useState(false);
 
   // Deposit Audit History
-  const [depositsTracker, setDepositsTracker] = useState([
-    { id: 501, amount: 1000.00, currency: 'USD', gateway: 'usdt_trc20', tx_hash: '0x8f3c91a0b9821039a82', status: 'approved', created_at: '2026-08-16 10:15' },
-    { id: 502, amount: 500.00, currency: 'USD', gateway: 'card_visa_mastercard', tx_hash: 'CH_PAY_881029', status: 'approved', created_at: '2026-08-15 16:45' }
-  ]);
+  const [depositsTracker, setDepositsTracker] = useState([]);
 
   // Withdrawal Form State
   const [withdrawMethod, setWithdrawMethod] = useState('crypto_usdt'); // 'crypto_usdt' | 'bank_wire' | 'debit_card' | 'skrill' | 'neteller' | 'local_depositor'
@@ -71,15 +65,12 @@ export default function FundsPage() {
   const [showAddressBookModal, setShowAddressBookModal] = useState(false);
 
   // Withdrawal Audit History
-  const [withdrawalsTracker, setWithdrawalsTracker] = useState([
-    { id: 701, amount: 500.00, network_fee: 1.00, net_amount: 499.00, currency: 'USD', payout_method: 'crypto_usdt', network: 'TRC20', destination_details: 'T9zXX9Kpq7aK9qP8291mLaZ387nK', status: 'pending', created_at: '2026-08-17 14:20' },
-    { id: 702, amount: 200.00, network_fee: 0.00, net_amount: 200.00, currency: 'USD', payout_method: 'bank_wire', network: 'NATIVE', destination_details: 'IBAN: GB82 BARC 2020 1530 9018', status: 'approved', created_at: '2026-08-15 11:30' }
-  ]);
+  const [withdrawalsTracker, setWithdrawalsTracker] = useState([]);
 
   // Internal Transfer Form State
   const [transferMode, setTransferMode] = useState('wallet_to_mt5');
   const [sourceId, setSourceId] = useState('Wallet');
-  const [destId, setDestId] = useState('501928');
+  const [destId, setDestId] = useState('');
   const [transferAmount, setTransferAmount] = useState('500');
   const [submittingTransfer, setSubmittingTransfer] = useState(false);
   const [transferMsg, setTransferMsg] = useState({ type: '', text: '' });
@@ -123,14 +114,21 @@ export default function FundsPage() {
         const accRes = await fetch('/api/trading-accounts', { headers: { 'Authorization': `Bearer ${token}` } });
         if (accRes.ok) {
           const accData = await accRes.json();
-          if (accData.data?.accounts && accData.data.accounts.length > 0) setAccounts(accData.data.accounts);
+          if (accData.data?.accounts) setAccounts(accData.data.accounts);
+        }
+
+        // Deposits History
+        const depRes = await fetch('/api/financials/deposits', { headers: { 'Authorization': `Bearer ${token}` } });
+        if (depRes.ok) {
+          const depData = await depRes.json();
+          if (depData.data?.deposits) setDepositsTracker(depData.data.deposits);
         }
 
         // Withdrawals History
         const wdRes = await fetch('/api/financials/withdrawals', { headers: { 'Authorization': `Bearer ${token}` } });
         if (wdRes.ok) {
           const wdData = await wdRes.json();
-          if (wdData.data?.withdrawals && wdData.data.withdrawals.length > 0) setWithdrawalsTracker(wdData.data.withdrawals);
+          if (wdData.data?.withdrawals) setWithdrawalsTracker(wdData.data.withdrawals);
         }
       } catch (e) {
         console.warn('Funding fetch warning:', e.message);

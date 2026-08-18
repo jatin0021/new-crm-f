@@ -87,6 +87,54 @@ export default function App() {
     return () => window.removeEventListener('popstate', handlePopState);
   }, [currentUser]);
 
+  // Real-time synchronization of currentUser profile & KYC status across the entire application
+  useEffect(() => {
+    if (!currentUser) return;
+
+    const syncUserProfile = async () => {
+      const token = localStorage.getItem('crm_jwt_token') || sessionStorage.getItem('crm_jwt_token');
+      if (!token) return;
+
+      try {
+        const res = await fetch('/api/user/profile', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.data?.profile) {
+            const updatedProfile = data.data.profile;
+            setCurrentUser(prev => {
+              if (!prev || prev.kyc_status !== updatedProfile.kyc_status || prev.email_verified !== updatedProfile.email_verified || prev.first_name !== updatedProfile.first_name || prev.last_name !== updatedProfile.last_name) {
+                if (localStorage.getItem('crm_user')) {
+                  localStorage.setItem('crm_user', JSON.stringify(updatedProfile));
+                }
+                if (sessionStorage.getItem('crm_user')) {
+                  sessionStorage.setItem('crm_user', JSON.stringify(updatedProfile));
+                }
+                return updatedProfile;
+              }
+              return prev;
+            });
+          }
+        } else if (res.status === 404 || res.status === 401 || res.status === 403) {
+          // Stale or deleted user session - clear credentials and log out cleanly
+          localStorage.removeItem('crm_user');
+          localStorage.removeItem('crm_jwt_token');
+          sessionStorage.removeItem('crm_user');
+          sessionStorage.removeItem('crm_jwt_token');
+          setCurrentUser(null);
+          setAuthView('login');
+        }
+      } catch (e) {
+        console.warn('App profile sync warning:', e.message);
+      }
+    };
+
+    syncUserProfile();
+    const interval = setInterval(syncUserProfile, 3000);
+    return () => clearInterval(interval);
+  }, [currentUser?.id]);
+
   // Client-Side Router Navigation Helper
   const navigateTo = (path) => {
     if (window.location.pathname !== path) {
@@ -293,7 +341,14 @@ export default function App() {
 
         {/* Admin Main Workspace */}
         <main className="flex-1 w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-10 py-6 sm:py-8">
-          <AdminDashboard onImpersonate={handleImpersonateUser} />
+          <AdminDashboard 
+            adminUser={adminUser} 
+            onImpersonate={handleImpersonateUser} 
+            onUpdateAdminUser={(updated) => {
+              setAdminUser(updated);
+              localStorage.setItem('crm_admin_user', JSON.stringify(updated));
+            }}
+          />
         </main>
 
       </div>
@@ -345,11 +400,6 @@ export default function App() {
         onExitImpersonation={handleExitImpersonation} 
       />
 
-      {/* 2. Account Activation Warning Banner */}
-      <ActivationBanner 
-        currentUser={currentUser} 
-        onResendVerification={handleResendVerification} 
-      />
 
       {/* 3. Session Inactivity Timeout Modal */}
       <SessionTimeoutModal 
