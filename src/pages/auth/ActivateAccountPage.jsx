@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAlert } from '../../context/AlertContext';
 import { CheckCircle2, AlertCircle, ArrowRight, ShieldCheck, Mail } from 'lucide-react';
 import AuthLayout from '../../components/auth/AuthLayout';
+import { safeJsonFetch } from '../../config/api';
 
 export default function ActivateAccountPage({ onNavigate = () => {} }) {
   const { alertSuccess } = useAlert();
@@ -22,14 +23,13 @@ export default function ActivateAccountPage({ onNavigate = () => {} }) {
 
     const activateUserAccount = async () => {
       try {
-        const response = await fetch('/api/auth/verify-email', {
+        const data = await safeJsonFetch('/api/auth/verify-email', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ token, email: emailParam })
         });
 
-        const data = await response.json();
-        if (response.ok && (data.ok || data.success)) {
+        if (data.ok && (data.ok || data.success)) {
           setActivated(true);
           
           // Update stored user object if exists

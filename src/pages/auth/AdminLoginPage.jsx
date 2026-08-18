@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Eye, EyeOff, ShieldCheck, Lock, Mail, AlertCircle, ArrowRight, ArrowLeft } from 'lucide-react';
 import AuthLayout from '../../components/auth/AuthLayout';
-import { API_BASE_URL } from '../../config/api';
+import { API_BASE_URL, safeJsonFetch } from '../../config/api';
 
 export default function AdminLoginPage({ onAdminLoginSuccess = () => {}, onNavigateTrader = () => {} }) {
   const [email, setEmail] = useState('admin@vintagecrm.com');
@@ -16,21 +16,13 @@ export default function AdminLoginPage({ onAdminLoginSuccess = () => {}, onNavig
     setLoading(true);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/admin/login`, {
+      const data = await safeJsonFetch('/api/admin/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })
       });
 
-      let data = {};
-      const text = await response.text();
-      try {
-        data = JSON.parse(text);
-      } catch (e) {
-        throw new Error(`Server returned status ${response.status}`);
-      }
-
-      if (response.ok && data.data?.token) {
+      if (data.ok && data.data?.token) {
         localStorage.setItem('crm_admin_token', data.data.token);
         localStorage.setItem('crm_admin_user', JSON.stringify(data.data.admin));
         onAdminLoginSuccess(data.data.admin);

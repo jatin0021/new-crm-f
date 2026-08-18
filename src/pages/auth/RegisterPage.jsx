@@ -3,6 +3,7 @@ import { useAlert } from '../../context/AlertContext';
 import { Eye, EyeOff, Mail, User, Globe, Phone, Lock, Tag, AlertCircle, ArrowRight, Check, Sparkles } from 'lucide-react';
 import AuthLayout from '../../components/auth/AuthLayout';
 import PasswordStrengthBar from '../../components/common/PasswordStrengthBar';
+import { API_BASE_URL, safeJsonFetch } from '../../config/api';
 
 export default function RegisterPage({ onRegisterSuccess = () => {}, onNavigate = () => {} }) {
   const { alertInfo } = useAlert();
