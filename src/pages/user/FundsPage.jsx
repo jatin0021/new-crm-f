@@ -50,11 +50,11 @@ export default function FundsPage() {
   // Deposit Form State
   const [depositTargetAccount, setDepositTargetAccount] = useState('wallet'); // 'wallet' or account id/login
   const [selectedGateway, setSelectedGateway] = useState('usdt_trc20');
+  const [activeDepositGateway, setActiveDepositGateway] = useState(null); // null (shows grid) or selected gateway object/id (shows dedicated payment view)
   const [depositAmount, setDepositAmount] = useState('500');
   const [txHash, setTxHash] = useState('');
   const [fileUploaded, setFileUploaded] = useState(false);
   const [submittingDeposit, setSubmittingDeposit] = useState(false);
-  const [depositSuccessMsg, setDepositSuccessMsg] = useState('');
   const [showCregisModal, setShowCregisModal] = useState(false);
 
   // Deposit Audit History
@@ -93,6 +93,89 @@ export default function FundsPage() {
     eth_native: "0x8f3c91a0b9821039a8201293810293847182930"
   };
 
+  const gatewayDetailsMap = {
+    usdt_trc20: {
+      id: 'usdt_trc20',
+      name: 'USDT TRC20/BEP20',
+      tagline: 'This is for usdt trc20 deposit',
+      about: 'Gateway processes deposits through your configured automatic payment integration (cards, wallets, or processor checkout).',
+      buttonText: 'Pay with Gateway',
+      isCrypto: true
+    },
+    usdt_erc20: {
+      id: 'usdt_erc20',
+      name: 'USDT (ERC-20)',
+      tagline: 'High-security Ethereum ERC-20 blockchain deposit channel',
+      about: 'Gateway processes deposits via Ethereum mainnet. 5-10 network confirmations required.',
+      buttonText: 'Pay with Gateway',
+      isCrypto: true
+    },
+    btc_onchain: {
+      id: 'btc_onchain',
+      name: 'Bitcoin (BTC)',
+      tagline: 'Direct On-Chain Bitcoin network deposit',
+      about: 'Bitcoin network transactions require 2-3 confirmations before being credited to your wallet.',
+      buttonText: 'Pay with Gateway',
+      isCrypto: true
+    },
+    eth_native: {
+      id: 'eth_native',
+      name: 'Ethereum (ETH)',
+      tagline: 'Native ETH Layer-1 deposit pool',
+      about: 'Native Ethereum Layer-1 transactions are verified automatically via smart contracts.',
+      buttonText: 'Pay with Gateway',
+      isCrypto: true
+    },
+    cregis_crypto: {
+      id: 'cregis_crypto',
+      name: 'Cregis Merchant Gateway (Auto)',
+      tagline: 'Automated multi-token instant checkout gateway',
+      about: 'Cregis Merchant Gateway provides real-time transaction monitoring and instant automated wallet settlement.',
+      buttonText: 'Pay with Cregis Merchant',
+      isCrypto: true
+    },
+    card_visa_mastercard: {
+      id: 'card_visa_mastercard',
+      name: 'Credit / Debit Card Gateway',
+      tagline: 'Visa / Mastercard instant fiat payment gateway',
+      about: 'Card gateway processes instant credit and debit card deposits with 3D Secure 2.0 fraud protection.',
+      buttonText: 'Pay with Card Gateway',
+      isCrypto: false
+    },
+    bank_wire: {
+      id: 'bank_wire',
+      name: 'International Bank Wire',
+      tagline: 'SWIFT / IBAN wire transfer to official company treasury',
+      about: 'Bank Wire transfers are processed during business hours upon receipt of SWIFT MT103 proof of payment.',
+      buttonText: 'Submit Wire Notification',
+      isCrypto: false
+    },
+    upi_qr: {
+      id: 'upi_qr',
+      name: 'UPI Direct / PhonePe / GPay QR',
+      tagline: 'Instant INR UPI QR payment channel',
+      about: 'UPI gateway supports instant QR code scanning via PhonePe, Google Pay, Paytm, and BHIM UPI apps.',
+      buttonText: 'Pay via UPI QR',
+      isCrypto: false
+    },
+    local_depositor: {
+      id: 'local_depositor',
+      name: 'Local P2P Cash Agent',
+      tagline: 'Regional licensed P2P cash agent desk',
+      about: 'Local depositor desk provides same-day regional cash deposits through verified local exchange partners.',
+      buttonText: 'Contact Local Agent',
+      isCrypto: false
+    },
+    manual_crypto: {
+      id: 'manual_crypto',
+      name: 'Manual Crypto / TXID',
+      tagline: 'Manual blockchain transaction TXID verification',
+      about: 'Manual deposit processing allows submitting custom TXIDs for manual compliance officer review.',
+      buttonText: 'Submit TXID Verification',
+      isCrypto: true
+    }
+  };
+
   // Automated Gas Fee Calculation
   const networkFees = {
     TRC20: 1.00,
@@ -112,15 +195,6 @@ export default function FundsPage() {
     }
     const acc = accounts.find(a => String(a.id) === String(withdrawSource) || String(a.login) === String(withdrawSource));
     return acc ? parseFloat(acc.balance || 0) : 0;
-  };
-
-  // Helper to get target account name for deposit
-  const getSelectedDepositTargetLabel = () => {
-    if (depositTargetAccount === 'wallet') {
-      return `Main Wallet - ${wallet.wallet_number || 'WLT5390'} - $${parseFloat(wallet.available_balance || 0).toFixed(2)} USD`;
-    }
-    const acc = accounts.find(a => String(a.id) === String(depositTargetAccount) || String(a.login) === String(depositTargetAccount));
-    return acc ? `MT5 ${acc.account_type?.toUpperCase() || 'LIVE'} #${acc.login || acc.account_number} - $${parseFloat(acc.balance || 0).toFixed(2)} USD` : 'Main Wallet';
   };
 
   // Fetch Wallet & Funding Data on Mount
@@ -163,6 +237,55 @@ export default function FundsPage() {
 
     fetchData();
   }, []);
+
+  // Submit Deposit Request Handler
+  const handleDepositSubmit = async (e) => {
+    if (e) e.preventDefault();
+    const amt = parseFloat(depositAmount) || 0;
+    if (amt <= 0) {
+      alertError('Please enter a valid deposit amount greater than $0.00 USD');
+      return;
+    }
+
+    const currentGwId = activeDepositGateway || selectedGateway;
+
+    if (currentGwId === 'cregis_crypto') {
+      setShowCregisModal(true);
+      return;
+    }
+
+    setSubmittingDeposit(true);
+    try {
+      const token = localStorage.getItem('crm_jwt_token') || sessionStorage.getItem('crm_jwt_token');
+      const res = await fetch('/api/financials/deposits', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          amount: amt,
+          gateway: currentGwId,
+          target_account: depositTargetAccount,
+          tx_hash: txHash || `TX-${Math.floor(100000 + Math.random() * 900000)}`
+        })
+      });
+
+      const data = await res.json();
+      if (res.ok && data.data?.deposit) {
+        setDepositsTracker(prev => [data.data.deposit, ...prev]);
+        alertSuccess(`Deposit request of $${amt.toFixed(2)} USD submitted successfully! Status: Pending administrator approval.`);
+        setDepositAmount('500');
+        setTxHash('');
+      } else {
+        alertError(data.message || 'Failed to process deposit request.');
+      }
+    } catch (err) {
+      alertError('Server connection error during deposit request.');
+    } finally {
+      setSubmittingDeposit(false);
+    }
+  };
 
   // Submit Withdrawal Handler
   const handleWithdrawalSubmit = async (e) => {
@@ -265,6 +388,8 @@ export default function FundsPage() {
     }
   };
 
+  const currentGwObj = gatewayDetailsMap[activeDepositGateway || selectedGateway] || gatewayDetailsMap.usdt_trc20;
+
   return (
     <div className="max-w-6xl mx-auto space-y-6 animate-in fade-in text-left">
       
@@ -354,12 +479,12 @@ export default function FundsPage() {
       </div>
 
       {/* ========================================================================= */}
-      {/* TAB 1: DEPOSITS HUB (MATCHING SCREENSHOT 1) */}
+      {/* TAB 1: DEPOSITS HUB */}
       {/* ========================================================================= */}
       {activeTab === 'deposit' && (
         <div className="space-y-6 animate-in fade-in duration-200">
           
-          {/* Target Account/Wallet Selector Top Banner (Screenshot 1) */}
+          {/* Target Account/Wallet Selector Top Banner */}
           <div className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200/80 card-shadow space-y-4">
             <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
               
@@ -403,75 +528,161 @@ export default function FundsPage() {
             </div>
           </div>
 
-          {/* Deposit Channels Container */}
-          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 card-shadow space-y-6">
-            <div className="border-b border-slate-100 pb-4">
-              <h2 className="text-xl font-black text-slate-900">Make a deposit</h2>
-              <p className="text-xs text-slate-500 font-medium mt-0.5">Choose a tab, then select an active method.</p>
-            </div>
-
-            {/* Deposit Gateway Directory with category filter tabs */}
-            <DepositGatewayDirectory
-              selectedGateway={selectedGateway}
-              onSelectGateway={(g) => setSelectedGateway(g)}
-            />
-
-            {/* Selected Gateway Checkout Box */}
-            <div className="mt-8 p-6 bg-slate-50 border border-slate-200 rounded-3xl space-y-5">
-              <div className="flex items-center justify-between border-b border-slate-200 pb-3">
-                <div className="flex items-center gap-2.5">
-                  <Zap className="w-5 h-5 text-emerald-600" />
-                  <h3 className="font-black text-sm text-slate-900">Selected Channel Checkout: <span className="uppercase text-emerald-600 font-mono">{selectedGateway.replace('_', ' ')}</span></h3>
-                </div>
-                <span className="text-[10px] font-bold bg-emerald-100 text-emerald-800 px-2.5 py-0.5 rounded-full border border-emerald-200">
-                  Target: {depositTargetAccount === 'wallet' ? 'Main Wallet' : `Account #${depositTargetAccount}`}
-                </span>
+          {/* VIEW 1: GATEWAY DIRECTORY GRID (Shown when no deposit option is active) */}
+          {!activeDepositGateway ? (
+            <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 card-shadow space-y-6">
+              <div className="border-b border-slate-100 pb-4">
+                <h2 className="text-xl font-black text-slate-900">Make a deposit</h2>
+                <p className="text-xs text-slate-500 font-medium mt-0.5">Choose a tab, then select an active method.</p>
               </div>
 
-              {/* QR Code & Wallet Address Display for Crypto */}
-              {selectedGateway.startsWith('usdt') || selectedGateway.startsWith('btc') || selectedGateway.startsWith('eth') ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
-                  <div className="space-y-3">
-                    <span className="text-xs font-extrabold text-slate-700 block">Deposit Address (Click to Copy):</span>
-                    <div className="flex items-center gap-2 p-3 bg-white border border-slate-200 rounded-2xl font-mono text-xs font-bold text-slate-900">
-                      <span className="truncate flex-1">{walletAddresses[selectedGateway] || walletAddresses.usdt_trc20}</span>
+              <DepositGatewayDirectory
+                selectedGateway={selectedGateway}
+                onSelectGateway={(gId) => {
+                  setSelectedGateway(gId);
+                  setActiveDepositGateway(gId);
+                }}
+              />
+            </div>
+          ) : (
+            
+            /* VIEW 2: DEDICATED FULLY WORKABLE DEPOSIT PAYMENT PAGE (MATCHING LATEST SCREENSHOT) */
+            <div className="space-y-6 animate-in zoom-in-95 duration-200">
+              
+              {/* Back Arrow & Gateway Title Bar */}
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setActiveDepositGateway(null)}
+                  className="w-10 h-10 rounded-full bg-white hover:bg-slate-100 border border-slate-200/90 text-slate-700 flex items-center justify-center transition-all cursor-pointer shadow-xs shrink-0"
+                >
+                  <ArrowLeft className="w-5 h-5" />
+                </button>
+                <h2 className="text-xl font-black text-slate-900 tracking-tight">{currentGwObj.name}</h2>
+              </div>
+
+              {/* Deposit Payment Form Card Container */}
+              <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 card-shadow">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                  
+                  {/* Left Section: Fully Workable Deposit Form */}
+                  <form onSubmit={handleDepositSubmit} className="lg:col-span-8 space-y-6 text-left">
+                    
+                    {/* Gateway Field Box */}
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-extrabold text-slate-700 block">Gateway</label>
+                      <div className="relative">
+                        <select
+                          value={selectedGateway}
+                          onChange={(e) => {
+                            setSelectedGateway(e.target.value);
+                            setActiveDepositGateway(e.target.value);
+                          }}
+                          className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:border-emerald-500 transition-all cursor-pointer appearance-none"
+                        >
+                          {Object.values(gatewayDetailsMap).map(gw => (
+                            <option key={gw.id} value={gw.id}>{gw.name}</option>
+                          ))}
+                        </select>
+                        <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 text-xs">▼</div>
+                      </div>
+                      <span className="text-[11px] text-slate-400 font-medium block pt-0.5">{currentGwObj.tagline}</span>
+                    </div>
+
+                    {/* Amount (USD) Input Field */}
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-extrabold text-slate-700 block">Amount (USD)</label>
+                      <div className="relative">
+                        <input
+                          type="number"
+                          required
+                          min={10}
+                          max={500000}
+                          step="any"
+                          value={depositAmount}
+                          onChange={(e) => setDepositAmount(e.target.value)}
+                          placeholder="0.00"
+                          className="w-full pl-4 pr-14 py-3 bg-white border border-slate-900 rounded-xl font-mono font-extrabold text-base text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all shadow-xs"
+                        />
+                        <span className="absolute right-4 top-1/2 -translate-y-1/2 font-mono font-bold text-xs text-slate-400">USD</span>
+                      </div>
+                      <p className="text-[11px] text-slate-400 font-medium leading-relaxed pt-1">
+                        After payment, your deposit will appear as Pending until an administrator approves it and credits your account.
+                      </p>
+                    </div>
+
+                    {/* Crypto Deposit Wallet Address & TXID Input (For Crypto Gateways) */}
+                    {currentGwObj.isCrypto && (
+                      <div className="p-5 bg-slate-50 border border-slate-200 rounded-2xl space-y-4">
+                        <div className="space-y-2">
+                          <span className="text-xs font-extrabold text-slate-700 block">Official Merchant Deposit Address:</span>
+                          <div className="flex items-center gap-2 p-3 bg-white border border-slate-200 rounded-xl font-mono text-xs font-bold text-slate-900">
+                            <span className="truncate flex-1">{walletAddresses[selectedGateway] || walletAddresses.usdt_trc20}</span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                navigator.clipboard.writeText(walletAddresses[selectedGateway] || walletAddresses.usdt_trc20);
+                                setCopiedWallet(true);
+                                setTimeout(() => setCopiedWallet(false), 2000);
+                              }}
+                              className="p-1.5 hover:bg-slate-100 rounded-lg text-emerald-600 cursor-pointer"
+                            >
+                              {copiedWallet ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-xs font-extrabold text-slate-700 block">Transaction Hash / TXID (Optional for manual audit)</label>
+                          <input
+                            type="text"
+                            value={txHash}
+                            onChange={(e) => setTxHash(e.target.value)}
+                            placeholder="e.g. 0x8f3c91a0b9821039a8201293810293847182930"
+                            className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-mono text-slate-900 focus:outline-none focus:border-emerald-500"
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Submit Button */}
+                    <div className="pt-2">
                       <button
-                        type="button"
-                        onClick={() => {
-                          navigator.clipboard.writeText(walletAddresses[selectedGateway] || walletAddresses.usdt_trc20);
-                          setCopiedWallet(true);
-                          setTimeout(() => setCopiedWallet(false), 2000);
-                        }}
-                        className="p-1.5 hover:bg-slate-100 rounded-lg text-emerald-600 cursor-pointer"
+                        type="submit"
+                        disabled={submittingDeposit || !depositAmount || parseFloat(depositAmount) <= 0}
+                        className="px-6 py-3 bg-emerald-700 hover:bg-emerald-600 text-white font-black text-xs sm:text-sm rounded-xl shadow-md transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
                       >
-                        {copiedWallet ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                        <Zap className="w-4 h-4" />
+                        <span>{submittingDeposit ? 'Processing...' : (currentGwObj.buttonText || 'Pay with Gateway')}</span>
                       </button>
                     </div>
-                    <p className="text-[11px] text-slate-500 font-medium">Send only the exact asset network to this address. Funds will be credited after 1 confirmation.</p>
+
+                  </form>
+
+                  {/* Right Section: About Sidebar (Matching Screenshot) */}
+                  <div className="lg:col-span-4 space-y-3 pt-2 text-left border-t lg:border-t-0 lg:border-l lg:border-slate-100 lg:pl-8">
+                    <h4 className="text-base font-black text-slate-900">About</h4>
+                    <p className="text-xs text-slate-500 font-medium leading-relaxed">
+                      {currentGwObj.about}
+                    </p>
                   </div>
 
-                  <div className="flex flex-col items-center justify-center p-4 bg-white border border-slate-200 rounded-2xl space-y-2">
-                    <QrCode className="w-24 h-24 text-slate-800" />
-                    <span className="text-[10px] font-mono text-slate-400 font-bold">SCAN QR CODE WITH WALLET</span>
-                  </div>
                 </div>
-              ) : (
-                <div className="p-4 bg-white border border-slate-200 rounded-2xl text-xs text-slate-700 font-medium">
-                  Instant automated Checkout Gateway initialized for <strong className="text-slate-900">{selectedGateway.toUpperCase()}</strong>. Click below to proceed.
-                </div>
-              )}
+              </div>
+
             </div>
-          </div>
+          )}
+
         </div>
       )}
 
       {/* ========================================================================= */}
-      {/* TAB 2: WITHDRAWAL PORTAL - STEPPED FLOW (MATCHING SCREENSHOT 2) */}
+      {/* TAB 2: WITHDRAWAL PORTAL - STEPPED FLOW */}
       {/* ========================================================================= */}
       {activeTab === 'withdrawal' && (
         <div className="space-y-6 animate-in fade-in duration-200">
           
-          {/* Header Bar with View Reports button (Screenshot 2) */}
+          {/* Header Bar with View Reports button */}
           <div className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200/80 card-shadow flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center justify-center font-bold shrink-0">
@@ -493,7 +704,7 @@ export default function FundsPage() {
             </button>
           </div>
 
-          {/* Stepper Container (Screenshot 2) */}
+          {/* Stepper Container */}
           <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 card-shadow space-y-8">
             
             {/* Title */}
@@ -547,7 +758,7 @@ export default function FundsPage() {
               </div>
             )}
 
-            {/* STEP 1: SOURCE SELECTION (Screenshot 2) */}
+            {/* STEP 1: SOURCE SELECTION */}
             {wdStep === 1 && (
               <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start animate-in fade-in duration-200">
                 
