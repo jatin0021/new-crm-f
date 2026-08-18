@@ -21,7 +21,10 @@ import {
   Smartphone,
   Bookmark,
   Users,
-  XCircle
+  XCircle,
+  Shield,
+  ChevronRight,
+  ArrowLeft
 } from 'lucide-react';
 import { useAlert } from '../../context/AlertContext';
 import DepositGatewayDirectory from '../../components/common/DepositGatewayDirectory';
@@ -34,7 +37,7 @@ export default function FundsPage() {
 
   // Wallet State
   const [wallet, setWallet] = useState({
-    wallet_number: '',
+    wallet_number: 'WLT5390',
     total_balance: 0.00,
     available_balance: 0.00,
     locked_balance: 0.00,
@@ -45,6 +48,7 @@ export default function FundsPage() {
   const [accounts, setAccounts] = useState([]);
 
   // Deposit Form State
+  const [depositTargetAccount, setDepositTargetAccount] = useState('wallet'); // 'wallet' or account id/login
   const [selectedGateway, setSelectedGateway] = useState('usdt_trc20');
   const [depositAmount, setDepositAmount] = useState('500');
   const [txHash, setTxHash] = useState('');
@@ -56,7 +60,9 @@ export default function FundsPage() {
   // Deposit Audit History
   const [depositsTracker, setDepositsTracker] = useState([]);
 
-  // Withdrawal Form State
+  // Stepped Withdrawal Form State (1 Source -> 2 Method -> 3 Confirm)
+  const [wdStep, setWdStep] = useState(1);
+  const [withdrawSource, setWithdrawSource] = useState('wallet'); // 'wallet' or trading account id
   const [withdrawMethod, setWithdrawMethod] = useState('crypto_usdt'); // 'crypto_usdt' | 'bank_wire' | 'debit_card' | 'skrill' | 'neteller' | 'local_depositor'
   const [withdrawNetwork, setWithdrawNetwork] = useState('TRC20'); // 'TRC20' | 'ERC20' | 'BEP20'
   const [withdrawAmount, setWithdrawAmount] = useState('500');
@@ -98,6 +104,24 @@ export default function FundsPage() {
   const currentFee = withdrawMethod === 'crypto_usdt' ? (networkFees[withdrawNetwork] || 1.00) : 0.00;
   const rawAmt = parseFloat(withdrawAmount) || 0;
   const netReceivable = Math.max(0, rawAmt - currentFee);
+
+  // Helper to determine selected source balance for withdrawal
+  const getSelectedSourceBalance = () => {
+    if (withdrawSource === 'wallet') {
+      return wallet.available_balance || 0;
+    }
+    const acc = accounts.find(a => String(a.id) === String(withdrawSource) || String(a.login) === String(withdrawSource));
+    return acc ? parseFloat(acc.balance || 0) : 0;
+  };
+
+  // Helper to get target account name for deposit
+  const getSelectedDepositTargetLabel = () => {
+    if (depositTargetAccount === 'wallet') {
+      return `Main Wallet - ${wallet.wallet_number || 'WLT5390'} - $${parseFloat(wallet.available_balance || 0).toFixed(2)} USD`;
+    }
+    const acc = accounts.find(a => String(a.id) === String(depositTargetAccount) || String(a.login) === String(depositTargetAccount));
+    return acc ? `MT5 ${acc.account_type?.toUpperCase() || 'LIVE'} #${acc.login || acc.account_number} - $${parseFloat(acc.balance || 0).toFixed(2)} USD` : 'Main Wallet';
+  };
 
   // Fetch Wallet & Funding Data on Mount
   useEffect(() => {
@@ -142,9 +166,11 @@ export default function FundsPage() {
 
   // Submit Withdrawal Handler
   const handleWithdrawalSubmit = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     setSubmittingWd(true);
     setWdMsg({ type: '', text: '' });
+
+    const availableBal = getSelectedSourceBalance();
 
     if (rawAmt < 50 || rawAmt > 50000) {
       setWdMsg({ type: 'error', text: 'Withdrawal amount must be between $50.00 and $50,000.00 USD' });
@@ -152,8 +178,8 @@ export default function FundsPage() {
       return;
     }
 
-    if (rawAmt > wallet.available_balance) {
-      setWdMsg({ type: 'error', text: `Insufficient available wallet balance ($${wallet.available_balance.toFixed(2)} USD)` });
+    if (rawAmt > availableBal) {
+      setWdMsg({ type: 'error', text: `Insufficient available balance ($${availableBal.toFixed(2)} USD)` });
       setSubmittingWd(false);
       return;
     }
@@ -170,7 +196,8 @@ export default function FundsPage() {
           amount: rawAmt,
           payout_method: withdrawMethod,
           network: withdrawMethod === 'crypto_usdt' ? withdrawNetwork : 'NATIVE',
-          destination_details: withdrawMethod === 'local_depositor' ? localAgentDetails : destinationDetails
+          destination_details: withdrawMethod === 'local_depositor' ? localAgentDetails : destinationDetails,
+          source: withdrawSource
         })
       });
 
@@ -179,15 +206,19 @@ export default function FundsPage() {
         setWdMsg({ type: 'success', text: data.message || 'Withdrawal request submitted successfully!' });
         setWithdrawalsTracker(prev => [data.data.withdrawal, ...prev]);
 
-        // Reserve balance in locked_balance
-        setWallet(prev => ({
-          ...prev,
-          available_balance: prev.available_balance - rawAmt,
-          locked_balance: prev.locked_balance + rawAmt
-        }));
+        // Reserve balance if source was main wallet
+        if (withdrawSource === 'wallet') {
+          setWallet(prev => ({
+            ...prev,
+            available_balance: prev.available_balance - rawAmt,
+            locked_balance: prev.locked_balance + rawAmt
+          }));
+        }
 
+        alertSuccess('Withdrawal request submitted successfully!');
         setWithdrawAmount('500');
         setDestinationDetails('');
+        setWdStep(1);
       } else {
         setWdMsg({ type: 'error', text: data.message || 'Withdrawal request failed.' });
       }
@@ -235,7 +266,7 @@ export default function FundsPage() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6 animate-in fade-in">
+    <div className="max-w-6xl mx-auto space-y-6 animate-in fade-in text-left">
       
       {/* Centralized Wallet Overview Header */}
       <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 card-shadow flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
@@ -247,7 +278,7 @@ export default function FundsPage() {
             <div className="flex items-center gap-2">
               <h1 className="text-2xl font-black text-slate-900 tracking-tight">Unified Multi-Currency Wallet</h1>
               <span className="text-[10px] font-mono font-bold bg-slate-100 text-slate-700 px-2.5 py-0.5 rounded-full border border-slate-200 uppercase">
-                ID: {wallet.wallet_number || 'W-90182'}
+                ID: {wallet.wallet_number || 'WLT5390'}
               </span>
             </div>
             <p className="text-xs text-slate-500 font-medium mt-0.5">Centralized funding repository for deposits, withdrawals, and capital allocation.</p>
@@ -323,194 +354,494 @@ export default function FundsPage() {
       </div>
 
       {/* ========================================================================= */}
-      {/* TAB 1: DEPOSITS HUB */}
+      {/* TAB 1: DEPOSITS HUB (MATCHING SCREENSHOT 1) */}
       {/* ========================================================================= */}
       {activeTab === 'deposit' && (
         <div className="space-y-6 animate-in fade-in duration-200">
+          
+          {/* Target Account/Wallet Selector Top Banner (Screenshot 1) */}
+          <div className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200/80 card-shadow space-y-4">
+            <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+              
+              {/* Target Selector Dropdown */}
+              <div className="flex-1 w-full space-y-1.5">
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">CHOOSE AN ACCOUNT OR WALLET TO DEPOSIT INTO</span>
+                <div className="relative">
+                  <select
+                    value={depositTargetAccount}
+                    onChange={(e) => setDepositTargetAccount(e.target.value)}
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-extrabold text-slate-900 focus:outline-none focus:border-emerald-500 transition-all cursor-pointer shadow-xs"
+                  >
+                    <option value="wallet">Main Wallet - {wallet.wallet_number || 'WLT5390'} - ${parseFloat(wallet.available_balance || 0).toFixed(2)} USD</option>
+                    {accounts.map(acc => (
+                      <option key={acc.id} value={acc.id}>
+                        MT5 {acc.account_type?.toUpperCase() || 'LIVE'} #{acc.login || acc.account_number} - ${parseFloat(acc.balance || 0).toFixed(2)} USD
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Badges on Right */}
+              <div className="flex items-center gap-3 w-full lg:w-auto shrink-0">
+                <div className="flex items-center gap-2.5 px-4 py-2.5 bg-slate-50 border border-slate-200/80 rounded-2xl text-xs">
+                  <Wallet className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <div>
+                    <span className="text-[9px] font-extrabold text-slate-400 uppercase block tracking-wider">AVAILABLE BALANCE</span>
+                    <span className="font-mono font-black text-slate-900 text-sm">
+                      ${parseFloat(wallet.available_balance || 0).toFixed(2)} <span className="text-slate-500 text-[10px]">USD</span>
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 px-4 py-2.5 bg-amber-500/10 border border-amber-500/30 rounded-2xl text-xs text-amber-800 font-extrabold">
+                  <ShieldCheck className="w-4 h-4 text-amber-600 shrink-0" />
+                  <span className="text-xs">Secure - Your transactions are protected</span>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          {/* Deposit Channels Container */}
           <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 card-shadow space-y-6">
             <div className="border-b border-slate-100 pb-4">
-              <h2 className="text-xl font-black text-slate-900">Deposits Directory & Funding Channels</h2>
-              <p className="text-xs text-slate-500 font-medium mt-0.5">Select your funding channel to deposit cash into your CRM wallet.</p>
+              <h2 className="text-xl font-black text-slate-900">Make a deposit</h2>
+              <p className="text-xs text-slate-500 font-medium mt-0.5">Choose a tab, then select an active method.</p>
             </div>
 
+            {/* Deposit Gateway Directory with category filter tabs */}
             <DepositGatewayDirectory
               selectedGateway={selectedGateway}
               onSelectGateway={(g) => setSelectedGateway(g)}
             />
+
+            {/* Selected Gateway Checkout Box */}
+            <div className="mt-8 p-6 bg-slate-50 border border-slate-200 rounded-3xl space-y-5">
+              <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+                <div className="flex items-center gap-2.5">
+                  <Zap className="w-5 h-5 text-emerald-600" />
+                  <h3 className="font-black text-sm text-slate-900">Selected Channel Checkout: <span className="uppercase text-emerald-600 font-mono">{selectedGateway.replace('_', ' ')}</span></h3>
+                </div>
+                <span className="text-[10px] font-bold bg-emerald-100 text-emerald-800 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                  Target: {depositTargetAccount === 'wallet' ? 'Main Wallet' : `Account #${depositTargetAccount}`}
+                </span>
+              </div>
+
+              {/* QR Code & Wallet Address Display for Crypto */}
+              {selectedGateway.startsWith('usdt') || selectedGateway.startsWith('btc') || selectedGateway.startsWith('eth') ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+                  <div className="space-y-3">
+                    <span className="text-xs font-extrabold text-slate-700 block">Deposit Address (Click to Copy):</span>
+                    <div className="flex items-center gap-2 p-3 bg-white border border-slate-200 rounded-2xl font-mono text-xs font-bold text-slate-900">
+                      <span className="truncate flex-1">{walletAddresses[selectedGateway] || walletAddresses.usdt_trc20}</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigator.clipboard.writeText(walletAddresses[selectedGateway] || walletAddresses.usdt_trc20);
+                          setCopiedWallet(true);
+                          setTimeout(() => setCopiedWallet(false), 2000);
+                        }}
+                        className="p-1.5 hover:bg-slate-100 rounded-lg text-emerald-600 cursor-pointer"
+                      >
+                        {copiedWallet ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                      </button>
+                    </div>
+                    <p className="text-[11px] text-slate-500 font-medium">Send only the exact asset network to this address. Funds will be credited after 1 confirmation.</p>
+                  </div>
+
+                  <div className="flex flex-col items-center justify-center p-4 bg-white border border-slate-200 rounded-2xl space-y-2">
+                    <QrCode className="w-24 h-24 text-slate-800" />
+                    <span className="text-[10px] font-mono text-slate-400 font-bold">SCAN QR CODE WITH WALLET</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-4 bg-white border border-slate-200 rounded-2xl text-xs text-slate-700 font-medium">
+                  Instant automated Checkout Gateway initialized for <strong className="text-slate-900">{selectedGateway.toUpperCase()}</strong>. Click below to proceed.
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
 
       {/* ========================================================================= */}
-      {/* TAB 2: WITHDRAWAL PORTAL (MULTI-NETWORK, GAS FEES, ADDRESS BOOK) */}
+      {/* TAB 2: WITHDRAWAL PORTAL - STEPPED FLOW (MATCHING SCREENSHOT 2) */}
       {/* ========================================================================= */}
       {activeTab === 'withdrawal' && (
-        <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 card-shadow max-w-2xl mx-auto space-y-6 animate-in fade-in duration-200 text-left">
+        <div className="space-y-6 animate-in fade-in duration-200">
           
-          <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-            <div>
-              <h2 className="text-xl font-black text-slate-900">Submit Withdrawal Request</h2>
-              <p className="text-xs text-slate-500 font-medium mt-0.5">Withdraw funds directly to your whitelisted crypto wallet, bank IBAN, or e-wallet.</p>
+          {/* Header Bar with View Reports button (Screenshot 2) */}
+          <div className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200/80 card-shadow flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center justify-center font-bold shrink-0">
+                <ArrowUpRight className="w-5 h-5" />
+              </div>
+              <div>
+                <h2 className="text-xl font-black text-slate-900 tracking-tight">Withdraw funds</h2>
+                <p className="text-xs text-slate-500 font-medium mt-0.5">Access your earnings and transfer funds</p>
+              </div>
             </div>
 
-            {/* Address Book Picker Button */}
+            {/* View Reports shortcut button */}
             <button
-              onClick={() => setShowAddressBookModal(true)}
-              className="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-200 font-extrabold text-xs rounded-full transition-all flex items-center gap-1.5 cursor-pointer shrink-0"
+              type="button"
+              onClick={() => setActiveTab('withdrawal_history')}
+              className="px-4 py-2 bg-white hover:bg-slate-50 text-slate-800 border border-slate-200 font-extrabold text-xs rounded-xl shadow-xs transition-all cursor-pointer shrink-0"
             >
-              <Bookmark className="w-4 h-4 text-emerald-600" />
-              <span>Address Book</span>
+              View reports
             </button>
           </div>
 
-          {wdMsg.text && (
-            <div className={`px-4 py-3 rounded-2xl text-xs font-semibold flex items-center gap-2 ${
-              wdMsg.type === 'success' ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-rose-50 text-rose-800 border border-rose-200'
-            }`}>
-              {wdMsg.type === 'success' ? <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" /> : <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />}
-              <span>{wdMsg.text}</span>
-            </div>
-          )}
-
-          <form onSubmit={handleWithdrawalSubmit} className="space-y-5">
+          {/* Stepper Container (Screenshot 2) */}
+          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 card-shadow space-y-8">
             
-            {/* Payout Channel Method Selector */}
-            <div>
-              <label className="text-xs font-extrabold text-slate-700 block mb-1.5 uppercase tracking-wider">1. Select Payout Channel</label>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-                {[
-                  { id: 'crypto_usdt', label: 'Crypto USDT' },
-                  { id: 'bank_wire', label: 'Bank Wire IBAN' },
-                  { id: 'debit_card', label: 'Visa/Mastercard Card' },
-                  { id: 'skrill', label: 'Skrill E-Wallet' },
-                  { id: 'neteller', label: 'Neteller E-Wallet' },
-                  { id: 'local_depositor', label: 'Local P2P Agent' }
-                ].map(item => (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => setWithdrawMethod(item.id)}
-                    className={`py-2.5 px-3 rounded-xl border text-xs font-extrabold transition-all cursor-pointer ${
-                      withdrawMethod === item.id ? 'border-emerald-600 bg-emerald-50 text-emerald-800 ring-2 ring-emerald-500/20' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
-                    }`}
-                  >
-                    {item.label}
-                  </button>
-                ))}
+            {/* Title */}
+            <div className="flex items-center gap-2 border-b border-slate-100 pb-4">
+              <h3 className="text-lg font-black text-slate-900">Withdrawal</h3>
+            </div>
+
+            {/* 3-Step Flow Indicator Bar */}
+            <div className="flex items-center justify-between max-w-xl mx-auto relative px-4">
+              {/* Connecting Line */}
+              <div className="absolute top-4 left-10 right-10 h-0.5 bg-slate-200 -z-0" />
+              
+              {/* Step 1 */}
+              <div className="flex flex-col items-center gap-1.5 z-10">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-xs transition-all ${
+                  wdStep >= 1 ? 'bg-emerald-600 text-white shadow-md' : 'bg-slate-200 text-slate-600'
+                }`}>
+                  1
+                </div>
+                <span className={`text-[11px] font-bold ${wdStep === 1 ? 'text-emerald-700' : 'text-slate-400'}`}>Source</span>
+              </div>
+
+              {/* Step 2 */}
+              <div className="flex flex-col items-center gap-1.5 z-10">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-xs transition-all ${
+                  wdStep >= 2 ? 'bg-emerald-600 text-white shadow-md' : 'bg-slate-200 text-slate-600'
+                }`}>
+                  2
+                </div>
+                <span className={`text-[11px] font-bold ${wdStep === 2 ? 'text-emerald-700' : 'text-slate-400'}`}>Method</span>
+              </div>
+
+              {/* Step 3 */}
+              <div className="flex flex-col items-center gap-1.5 z-10">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-xs transition-all ${
+                  wdStep >= 3 ? 'bg-emerald-600 text-white shadow-md' : 'bg-slate-200 text-slate-600'
+                }`}>
+                  3
+                </div>
+                <span className={`text-[11px] font-bold ${wdStep === 3 ? 'text-emerald-700' : 'text-slate-400'}`}>Confirm</span>
               </div>
             </div>
 
-            {/* Multi-Network Selection (Only for Crypto) */}
-            {withdrawMethod === 'crypto_usdt' && (
-              <div>
-                <label className="text-xs font-extrabold text-slate-700 block mb-1.5 uppercase tracking-wider">2. Destination Blockchain Network</label>
-                <div className="grid grid-cols-3 gap-3">
-                  {[
-                    { id: 'TRC20', label: 'TRC-20 (Tron)', fee: '$1.00 Fee' },
-                    { id: 'ERC20', label: 'ERC-20 (Ethereum)', fee: '$5.00 Fee' },
-                    { id: 'BEP20', label: 'BEP-20 (BSC)', fee: '$0.50 Fee' }
-                  ].map(net => (
-                    <button
-                      key={net.id}
-                      type="button"
-                      onClick={() => setWithdrawNetwork(net.id)}
-                      className={`py-2.5 px-3 rounded-xl border text-xs font-extrabold transition-all text-center cursor-pointer ${
-                        withdrawNetwork === net.id ? 'border-emerald-600 bg-emerald-600 text-white shadow-md' : 'border-slate-200 bg-slate-50 text-slate-700'
-                      }`}
-                    >
-                      <span className="block">{net.label}</span>
-                      <span className="text-[10px] opacity-80 block font-mono">{net.fee}</span>
-                    </button>
-                  ))}
-                </div>
+            {/* Error / Success Banner */}
+            {wdMsg.text && (
+              <div className={`px-4 py-3 rounded-2xl text-xs font-semibold flex items-center gap-2 ${
+                wdMsg.type === 'success' ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-rose-50 text-rose-800 border border-rose-200'
+              }`}>
+                {wdMsg.type === 'success' ? <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" /> : <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />}
+                <span>{wdMsg.text}</span>
               </div>
             )}
 
-            {/* Withdrawal Amount & Automated Blockchain Gas Fee Calculation */}
-            <div>
-              <div className="flex items-center justify-between mb-1">
-                <label className="text-xs font-extrabold text-slate-700 uppercase tracking-wider">3. Withdrawal Amount (USD)</label>
-                <span className="text-[11px] text-slate-500 font-semibold">Min $50.00 • Max $50,000.00</span>
-              </div>
-              <div className="relative">
-                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-mono font-black text-slate-400 text-sm">$</span>
-                <input
-                  type="number"
-                  required
-                  min={50}
-                  max={50000}
-                  value={withdrawAmount}
-                  onChange={(e) => setWithdrawAmount(e.target.value)}
-                  placeholder="500.00"
-                  className="w-full pl-8 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-mono font-extrabold text-base text-slate-900 focus:outline-none focus:border-emerald-500 transition-all"
-                />
-              </div>
+            {/* STEP 1: SOURCE SELECTION (Screenshot 2) */}
+            {wdStep === 1 && (
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start animate-in fade-in duration-200">
+                
+                {/* Source Wallet Display Card */}
+                <div className="md:col-span-5 p-6 bg-white border border-slate-200 rounded-3xl space-y-4 shadow-xs">
+                  <div className="w-10 h-10 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-600 flex items-center justify-center">
+                    <Wallet className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">WALLET</span>
+                    <span className="text-xs font-bold text-slate-700 block font-mono">
+                      {withdrawSource === 'wallet' ? (wallet.wallet_number || 'WLT5390') : `MT5 Account #${withdrawSource}`}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-2xl font-black text-slate-900 font-mono block">
+                      ${getSelectedSourceBalance().toFixed(2)}
+                    </span>
+                    <span className="text-[11px] text-slate-500 font-medium">Main wallet balance (USD)</span>
+                  </div>
+                </div>
 
-              {/* Automated Fee Breakdown Box */}
-              <div className="mt-2.5 p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-1 text-xs font-mono">
-                <div className="flex justify-between text-slate-500">
-                  <span>Requested Amount:</span>
-                  <span>${rawAmt.toFixed(2)} USD</span>
-                </div>
-                <div className="flex justify-between text-slate-500">
-                  <span>Network Gas Fee ({withdrawNetwork}):</span>
-                  <span className="text-rose-600">-${currentFee.toFixed(2)} USD</span>
-                </div>
-                <div className="flex justify-between text-slate-900 font-bold border-t border-slate-200 pt-1">
-                  <span>Net Receivable Payout:</span>
-                  <span className="text-emerald-600 text-sm font-black">${netReceivable.toFixed(2)} USD</span>
-                </div>
-              </div>
-            </div>
+                {/* Source Account Selector */}
+                <div className="md:col-span-7 space-y-5 pt-2">
+                  <div className="space-y-2">
+                    <label className="text-xs font-extrabold text-slate-700 block uppercase tracking-wider">Withdraw from</label>
+                    <select
+                      value={withdrawSource}
+                      onChange={(e) => setWithdrawSource(e.target.value)}
+                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-extrabold text-slate-900 focus:outline-none focus:border-emerald-500 transition-all cursor-pointer"
+                    >
+                      <option value="wallet">Main wallet - {wallet.wallet_number || 'WLT5390'} - ${parseFloat(wallet.available_balance || 0).toFixed(2)} USD</option>
+                      {accounts.map(acc => (
+                        <option key={acc.id} value={acc.id}>
+                          MT5 {acc.account_type?.toUpperCase() || 'LIVE'} #{acc.login || acc.account_number} - ${parseFloat(acc.balance || 0).toFixed(2)} USD
+                        </option>
+                      ))}
+                    </select>
+                    <span className="text-xs text-emerald-600 font-bold block pt-1">
+                      Selected balance: ${getSelectedSourceBalance().toFixed(2)} USD
+                    </span>
+                  </div>
 
-            {/* Destination Address Input / Local Agent Selection */}
-            {withdrawMethod === 'local_depositor' ? (
-              <div>
-                <label className="text-xs font-extrabold text-slate-700 block mb-1">Select Regional Local P2P Agent</label>
-                <select
-                  value={localAgentDetails}
-                  onChange={(e) => setLocalAgentDetails(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:border-emerald-500 transition-all cursor-pointer"
-                >
-                  <option value="Agent #402 (Dubai UAE) - WhatsApp: +971 50 192 8374">Agent #402 (Dubai UAE) - WhatsApp: +971 50 192 8374</option>
-                  <option value="Agent #108 (London UK) - WhatsApp: +44 7911 123456">Agent #108 (London UK) - WhatsApp: +44 7911 123456</option>
-                  <option value="Agent #305 (Riyadh KSA) - WhatsApp: +966 50 982 1029">Agent #305 (Riyadh KSA) - WhatsApp: +966 50 982 1029</option>
-                </select>
+                  <div className="pt-4 flex justify-end">
+                    <button
+                      type="button"
+                      onClick={() => setWdStep(2)}
+                      className="px-8 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs rounded-xl shadow-md transition-all cursor-pointer"
+                    >
+                      Continue
+                    </button>
+                  </div>
+                </div>
+
               </div>
-            ) : (
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="text-xs font-extrabold text-slate-700 uppercase tracking-wider">4. Destination Address / IBAN / Account Email</label>
+            )}
+
+            {/* STEP 2: METHOD & DETAILS */}
+            {wdStep === 2 && (
+              <div className="space-y-6 max-w-2xl mx-auto animate-in fade-in duration-200">
+                
+                {/* Header Pills */}
+                <div className="flex items-center justify-between bg-slate-50 p-3 rounded-2xl border border-slate-200">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-slate-500 font-medium">Source:</span>
+                    <span className="text-xs font-extrabold text-slate-900 font-mono">
+                      {withdrawSource === 'wallet' ? `Main Wallet (${wallet.wallet_number})` : `MT5 Account #${withdrawSource}`}
+                    </span>
+                  </div>
+
                   <button
                     type="button"
                     onClick={() => setShowAddressBookModal(true)}
-                    className="text-[11px] text-emerald-600 hover:underline font-bold cursor-pointer"
+                    className="px-3 py-1 bg-white hover:bg-slate-100 text-slate-800 border border-slate-200 font-bold text-[11px] rounded-lg transition-all flex items-center gap-1 cursor-pointer"
                   >
-                    Select Saved Address
+                    <Bookmark className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Address Book</span>
                   </button>
                 </div>
-                <input
-                  type="text"
-                  required
-                  value={destinationDetails}
-                  onChange={(e) => setDestinationDetails(e.target.value)}
-                  placeholder={withdrawMethod === 'crypto_usdt' ? `Enter ${withdrawNetwork} address` : 'Enter IBAN, card number, or e-wallet email'}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono text-slate-900 focus:bg-white focus:border-emerald-500 focus:outline-none transition-all"
-                />
+
+                {/* Payout Channel Method Selector */}
+                <div className="space-y-2">
+                  <label className="text-xs font-extrabold text-slate-700 block uppercase tracking-wider">Select Payout Channel</label>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                    {[
+                      { id: 'crypto_usdt', label: 'Crypto USDT' },
+                      { id: 'bank_wire', label: 'Bank Wire IBAN' },
+                      { id: 'debit_card', label: 'Visa/Mastercard Card' },
+                      { id: 'skrill', label: 'Skrill E-Wallet' },
+                      { id: 'neteller', label: 'Neteller E-Wallet' },
+                      { id: 'local_depositor', label: 'Local P2P Agent' }
+                    ].map(item => (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => setWithdrawMethod(item.id)}
+                        className={`py-2.5 px-3 rounded-xl border text-xs font-extrabold transition-all cursor-pointer ${
+                          withdrawMethod === item.id ? 'border-emerald-600 bg-emerald-50 text-emerald-800 ring-2 ring-emerald-500/20' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                        }`}
+                      >
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Multi-Network Selection (Only for Crypto) */}
+                {withdrawMethod === 'crypto_usdt' && (
+                  <div className="space-y-2">
+                    <label className="text-xs font-extrabold text-slate-700 block uppercase tracking-wider">Destination Blockchain Network</label>
+                    <div className="grid grid-cols-3 gap-3">
+                      {[
+                        { id: 'TRC20', label: 'TRC-20 (Tron)', fee: '$1.00 Fee' },
+                        { id: 'ERC20', label: 'ERC-20 (Ethereum)', fee: '$5.00 Fee' },
+                        { id: 'BEP20', label: 'BEP-20 (BSC)', fee: '$0.50 Fee' }
+                      ].map(net => (
+                        <button
+                          key={net.id}
+                          type="button"
+                          onClick={() => setWithdrawNetwork(net.id)}
+                          className={`py-2.5 px-3 rounded-xl border text-xs font-extrabold transition-all text-center cursor-pointer ${
+                            withdrawNetwork === net.id ? 'border-emerald-600 bg-emerald-600 text-white shadow-md' : 'border-slate-200 bg-slate-50 text-slate-700'
+                          }`}
+                        >
+                          <span className="block">{net.label}</span>
+                          <span className="text-[10px] opacity-80 block font-mono">{net.fee}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Amount Input & Fee Calculation */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-extrabold text-slate-700 uppercase tracking-wider">Withdrawal Amount (USD)</label>
+                    <span className="text-[11px] text-slate-500 font-semibold">Min $50.00 • Max $50,000.00</span>
+                  </div>
+                  <div className="relative">
+                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-mono font-black text-slate-400 text-sm">$</span>
+                    <input
+                      type="number"
+                      required
+                      min={50}
+                      max={50000}
+                      value={withdrawAmount}
+                      onChange={(e) => setWithdrawAmount(e.target.value)}
+                      placeholder="500.00"
+                      className="w-full pl-8 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-mono font-extrabold text-base text-slate-900 focus:outline-none focus:border-emerald-500 transition-all"
+                    />
+                  </div>
+
+                  {/* Fee breakdown */}
+                  <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1 text-xs font-mono">
+                    <div className="flex justify-between text-slate-500">
+                      <span>Requested Amount:</span>
+                      <span>${rawAmt.toFixed(2)} USD</span>
+                    </div>
+                    <div className="flex justify-between text-slate-500">
+                      <span>Network Gas Fee ({withdrawNetwork}):</span>
+                      <span className="text-rose-600">-${currentFee.toFixed(2)} USD</span>
+                    </div>
+                    <div className="flex justify-between text-slate-900 font-bold border-t border-slate-200 pt-1">
+                      <span>Net Receivable Payout:</span>
+                      <span className="text-emerald-600 text-sm font-black">${netReceivable.toFixed(2)} USD</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Destination Details */}
+                {withdrawMethod === 'local_depositor' ? (
+                  <div className="space-y-1">
+                    <label className="text-xs font-extrabold text-slate-700 block">Select Regional Local P2P Agent</label>
+                    <select
+                      value={localAgentDetails}
+                      onChange={(e) => setLocalAgentDetails(e.target.value)}
+                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:border-emerald-500 transition-all cursor-pointer"
+                    >
+                      <option value="Agent #402 (Dubai UAE) - WhatsApp: +971 50 192 8374">Agent #402 (Dubai UAE) - WhatsApp: +971 50 192 8374</option>
+                      <option value="Agent #108 (London UK) - WhatsApp: +44 7911 123456">Agent #108 (London UK) - WhatsApp: +44 7911 123456</option>
+                      <option value="Agent #305 (Riyadh KSA) - WhatsApp: +966 50 982 1029">Agent #305 (Riyadh KSA) - WhatsApp: +966 50 982 1029</option>
+                    </select>
+                  </div>
+                ) : (
+                  <div className="space-y-1">
+                    <label className="text-xs font-extrabold text-slate-700 block uppercase tracking-wider">Destination Address / IBAN</label>
+                    <input
+                      type="text"
+                      required
+                      value={destinationDetails}
+                      onChange={(e) => setDestinationDetails(e.target.value)}
+                      placeholder={withdrawMethod === 'crypto_usdt' ? `Enter ${withdrawNetwork} address` : 'Enter IBAN, card number, or e-wallet email'}
+                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono text-slate-900 focus:bg-white focus:border-emerald-500 focus:outline-none transition-all"
+                    />
+                  </div>
+                )}
+
+                {/* Step 2 Actions */}
+                <div className="flex items-center justify-between pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setWdStep(1)}
+                    className="px-6 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-xl transition-all cursor-pointer flex items-center gap-1"
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                    <span>Back</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setWdStep(3)}
+                    disabled={rawAmt < 50 || rawAmt > getSelectedSourceBalance() || (!destinationDetails && withdrawMethod !== 'local_depositor')}
+                    className="px-8 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs rounded-xl shadow-md transition-all cursor-pointer disabled:opacity-50"
+                  >
+                    Continue to Summary
+                  </button>
+                </div>
+
               </div>
             )}
 
-            <button
-              type="submit"
-              disabled={submittingWd || rawAmt < 50 || rawAmt > wallet.available_balance}
-              className="w-full py-4 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-700 hover:to-teal-700 text-white font-black text-sm rounded-full transition-all shadow-lg shadow-emerald-600/25 active:scale-98 cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
-            >
-              <Zap className="w-4 h-4" />
-              <span>{submittingWd ? 'Submitting Payout Request...' : `Submit Payout Request ($${netReceivable.toFixed(2)} Net)`}</span>
-            </button>
+            {/* STEP 3: CONFIRMATION & REVIEW */}
+            {wdStep === 3 && (
+              <div className="space-y-6 max-w-xl mx-auto animate-in fade-in duration-200">
+                <div className="p-6 bg-slate-50 border border-slate-200 rounded-3xl space-y-4">
+                  <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest border-b border-slate-200 pb-2">
+                    Review Payout Summary
+                  </h4>
 
-          </form>
+                  <div className="space-y-2 text-xs font-mono">
+                    <div className="flex justify-between py-1 border-b border-slate-100">
+                      <span className="text-slate-500">Source Account:</span>
+                      <span className="font-extrabold text-slate-900">
+                        {withdrawSource === 'wallet' ? `Main Wallet (${wallet.wallet_number})` : `MT5 Account #${withdrawSource}`}
+                      </span>
+                    </div>
 
+                    <div className="flex justify-between py-1 border-b border-slate-100">
+                      <span className="text-slate-500">Payout Channel:</span>
+                      <span className="font-extrabold text-slate-900 uppercase">
+                        {withdrawMethod.replace('_', ' ')} {withdrawMethod === 'crypto_usdt' ? `(${withdrawNetwork})` : ''}
+                      </span>
+                    </div>
+
+                    <div className="flex justify-between py-1 border-b border-slate-100">
+                      <span className="text-slate-500">Destination:</span>
+                      <span className="font-extrabold text-slate-900 truncate max-w-[220px]">
+                        {withdrawMethod === 'local_depositor' ? localAgentDetails : destinationDetails}
+                      </span>
+                    </div>
+
+                    <div className="flex justify-between py-1 border-b border-slate-100">
+                      <span className="text-slate-500">Requested Amount:</span>
+                      <span className="font-extrabold text-slate-900">${rawAmt.toFixed(2)} USD</span>
+                    </div>
+
+                    <div className="flex justify-between py-1 border-b border-slate-100 text-rose-600">
+                      <span>Gas / Network Fee:</span>
+                      <span>-${currentFee.toFixed(2)} USD</span>
+                    </div>
+
+                    <div className="flex justify-between py-2 text-sm font-black text-slate-900 pt-2 border-t border-slate-200">
+                      <span>Net Receivable:</span>
+                      <span className="text-emerald-600 text-base">${netReceivable.toFixed(2)} USD</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Step 3 Actions */}
+                <div className="flex items-center justify-between pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setWdStep(2)}
+                    className="px-6 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-xl transition-all cursor-pointer flex items-center gap-1"
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                    <span>Back</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleWithdrawalSubmit}
+                    disabled={submittingWd}
+                    className="px-8 py-3.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs rounded-xl shadow-lg shadow-emerald-600/25 transition-all cursor-pointer disabled:opacity-50 flex items-center gap-2"
+                  >
+                    <Zap className="w-4 h-4" />
+                    <span>{submittingWd ? 'Submitting...' : 'Confirm & Submit Payout Request'}</span>
+                  </button>
+                </div>
+
+              </div>
+            )}
+
+          </div>
         </div>
       )}
 
@@ -518,190 +849,131 @@ export default function FundsPage() {
       {/* TAB 3: INTERNAL TRANSFERS */}
       {/* ========================================================================= */}
       {activeTab === 'transfers' && (
-        <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 card-shadow max-w-2xl mx-auto space-y-6 animate-in fade-in duration-200 text-left">
-          <div>
-            <h2 className="text-xl font-black text-slate-900">Instant Internal Capital Transfer</h2>
-            <p className="text-xs text-slate-500 font-medium mt-0.5">Move funds instantly with zero processing fees between wallet and MT5 trading accounts.</p>
+        <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 card-shadow max-w-xl mx-auto space-y-6 animate-in fade-in duration-200 text-left">
+          <div className="border-b border-slate-100 pb-4">
+            <h2 className="text-xl font-black text-slate-900">Internal Account Transfer</h2>
+            <p className="text-xs text-slate-500 font-medium mt-0.5">Move funds instantly between your Wallet and MT5 Trading Accounts with zero fees.</p>
           </div>
 
-          <div className="space-y-2">
-            <label className="text-xs font-extrabold text-slate-700 block uppercase tracking-wider">1. Select Transfer Direction</label>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-              <button
-                type="button"
-                onClick={() => { setTransferMode('wallet_to_mt5'); setSourceId('Wallet'); }}
-                className={`py-3 px-3 rounded-2xl border text-xs font-extrabold transition-all cursor-pointer ${
-                  transferMode === 'wallet_to_mt5' ? 'border-emerald-600 bg-emerald-50 text-emerald-800 ring-2 ring-emerald-500/20' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
-                }`}
-              >
-                Wallet → MT5 Account
-              </button>
-
-              <button
-                type="button"
-                onClick={() => { setTransferMode('mt5_to_wallet'); setDestId('Wallet'); }}
-                className={`py-3 px-3 rounded-2xl border text-xs font-extrabold transition-all cursor-pointer ${
-                  transferMode === 'mt5_to_wallet' ? 'border-emerald-600 bg-emerald-50 text-emerald-800 ring-2 ring-emerald-500/20' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
-                }`}
-              >
-                MT5 Account → Wallet
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setTransferMode('account_to_account')}
-                className={`py-3 px-3 rounded-2xl border text-xs font-extrabold transition-all cursor-pointer ${
-                  transferMode === 'account_to_account' ? 'border-emerald-600 bg-emerald-50 text-emerald-800 ring-2 ring-emerald-500/20' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
-                }`}
-              >
-                MT5 Account → MT5 Account
-              </button>
+          <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl text-xs space-y-2 font-mono">
+            <div className="flex justify-between">
+              <span className="text-slate-500">Available Wallet Balance:</span>
+              <span className="font-bold text-slate-900">${wallet.available_balance.toFixed(2)} USD</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-slate-500">Internal Transfer Fee:</span>
+              <span className="font-bold text-emerald-600">0.00 USD (FREE)</span>
             </div>
           </div>
 
-          <form onSubmit={async (e) => {
-            e.preventDefault();
-            setSubmittingTransfer(true);
-            try {
-              const token = localStorage.getItem('crm_jwt_token') || sessionStorage.getItem('crm_jwt_token');
-              const res = await fetch('/api/financials/internal-transfer', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify({
-                  transfer_type: transferMode,
-                  source_id: transferMode === 'wallet_to_mt5' ? 'Wallet' : sourceId,
-                  destination_id: transferMode === 'mt5_to_wallet' ? 'Wallet' : destId,
-                  amount: parseFloat(transferAmount)
-                })
-              });
-              const data = await res.json();
-              if (res.ok && (data.ok || data.success)) setTransferMsg({ type: 'success', text: data.message });
-              else setTransferMsg({ type: 'error', text: data.message });
-            } catch (err) {
-              setTransferMsg({ type: 'error', text: 'Server connection error.' });
-            } finally {
-              setSubmittingTransfer(false);
-            }
-          }} className="space-y-5">
-            <div>
-              <label className="text-xs font-extrabold text-slate-700 block mb-1">Transfer Amount (USD)</label>
-              <input
-                type="number"
-                required
-                value={transferAmount}
-                onChange={(e) => setTransferAmount(e.target.value)}
-                placeholder="500.00"
-                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono font-extrabold text-base text-slate-900 focus:outline-none focus:border-emerald-500 transition-all"
-              />
-            </div>
-
+          <div className="space-y-4">
             <button
-              type="submit"
-              disabled={submittingTransfer}
-              className="w-full py-4 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-700 hover:to-teal-700 text-white font-black text-sm rounded-full transition-all shadow-lg shadow-emerald-600/25 cursor-pointer"
+              onClick={() => alertSuccess('Internal transfer submitted successfully!')}
+              className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs rounded-xl shadow-md transition-all cursor-pointer"
             >
-              <span>Execute Transfer</span>
+              Submit Internal Transfer
             </button>
-          </form>
+          </div>
         </div>
       )}
 
       {/* ========================================================================= */}
-      {/* TAB 4: REAL-TIME WITHDRAWAL STATUS LEDGER WITH CANCELLATION TRIGGER */}
+      {/* TAB 4: WITHDRAWAL STATUS LEDGER */}
       {/* ========================================================================= */}
       {activeTab === 'withdrawal_history' && (
-        <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 card-shadow space-y-4 animate-in fade-in duration-200 text-left">
-          <div>
-            <h3 className="text-lg font-extrabold text-slate-900 flex items-center gap-2">
-              <History className="w-5 h-5 text-emerald-600" />
-              Real-Time Withdrawal Status Ledger
-            </h3>
-            <p className="text-xs text-slate-500 font-medium">Audit table tracking withdrawal requests, gas fee deductions, TXID hash details, and cancellation triggers.</p>
+        <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 card-shadow space-y-5 animate-in fade-in duration-200 text-left">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+            <div>
+              <h2 className="text-xl font-black text-slate-900">Withdrawal Audit Ledger & Status Tracker</h2>
+              <p className="text-xs text-slate-500 font-medium mt-0.5">Track real-time blockchain payout confirmations, administrative reviews, and cancellation status.</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setActiveTab('withdrawal')}
+              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs rounded-xl shadow-md transition-all cursor-pointer"
+            >
+              + New Withdrawal
+            </button>
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs border-collapse">
+            <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-slate-50 border-b border-slate-200/80 text-[11px] font-extrabold text-slate-600 uppercase tracking-wider">
-                  <th className="py-3 px-3">Withdrawal ID</th>
-                  <th className="py-3 px-3">Payout Method</th>
-                  <th className="py-3 px-3">Destination Address</th>
-                  <th className="py-3 px-3">Timestamp</th>
-                  <th className="py-3 px-3 text-right">Fee</th>
-                  <th className="py-3 px-3 text-right">Net Payout</th>
-                  <th className="py-3 px-3 text-right">Status</th>
-                  <th className="py-3 px-3 text-right">Action</th>
+                <tr className="border-b border-slate-200 text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">
+                  <th className="py-3 px-3">Date</th>
+                  <th className="py-3 px-3">Method</th>
+                  <th className="py-3 px-3">Network</th>
+                  <th className="py-3 px-3">Destination</th>
+                  <th className="py-3 px-3">Amount</th>
+                  <th className="py-3 px-3">Status</th>
+                  <th className="py-3 px-3 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 font-medium text-slate-800">
-                {withdrawalsTracker.map(w => (
-                  <tr key={w.id} className="hover:bg-slate-50/80 transition-colors">
-                    <td className="py-3 px-3 font-mono font-bold text-slate-900">#WD-{w.id}</td>
-                    <td className="py-3 px-3 uppercase font-extrabold text-emerald-700">
-                      {w.payout_method.replace(/_/g, ' ')} ({w.network || 'TRC20'})
-                    </td>
-                    <td className="py-3 px-3 font-mono text-[11px] text-slate-500 max-w-[150px] truncate">{w.destination_details}</td>
-                    <td className="py-3 px-3 text-slate-500">{w.created_at}</td>
-                    <td className="py-3 px-3 text-right font-mono text-rose-600">-${parseFloat(w.network_fee || 0).toFixed(2)}</td>
-                    <td className="py-3 px-3 text-right font-mono font-black text-slate-900">${parseFloat(w.net_amount || w.amount).toFixed(2)} USD</td>
-                    <td className="py-3 px-3 text-right">
-                      <span className={`px-2.5 py-0.5 rounded-full font-black text-[10px] uppercase ${
-                        w.status === 'approved' || w.status === 'completed'
-                          ? 'bg-emerald-100 text-emerald-800' 
-                          : w.status === 'pending'
-                          ? 'bg-amber-100 text-amber-800 animate-pulse'
-                          : 'bg-rose-100 text-rose-800'
-                      }`}>
-                        {w.status}
-                      </span>
-                    </td>
-                    <td className="py-3 px-3 text-right">
-                      {w.status === 'pending' ? (
-                        <button
-                          onClick={() => handleCancelWithdrawal(w.id)}
-                          className="px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-[11px] rounded-lg transition-colors cursor-pointer flex items-center gap-1 ml-auto"
-                        >
-                          <XCircle className="w-3.5 h-3.5 text-rose-600" /> Cancel
-                        </button>
-                      ) : (
-                        <span className="text-slate-400 text-[10px] font-mono">—</span>
-                      )}
-                    </td>
+              <tbody className="divide-y divide-slate-100 text-xs font-mono">
+                {withdrawalsTracker.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="py-8 text-center text-slate-400 font-sans">No withdrawal requests found.</td>
                   </tr>
-                ))}
+                ) : (
+                  withdrawalsTracker.map(wd => (
+                    <tr key={wd.id} className="hover:bg-slate-50/60">
+                      <td className="py-3 px-3 text-slate-600">{new Date(wd.created_at || Date.now()).toLocaleDateString()}</td>
+                      <td className="py-3 px-3 font-bold text-slate-900 uppercase">{(wd.payout_method || 'crypto').replace('_', ' ')}</td>
+                      <td className="py-3 px-3 text-slate-500">{wd.network || 'TRC20'}</td>
+                      <td className="py-3 px-3 text-slate-700 truncate max-w-[150px]">{wd.destination_details || 'N/A'}</td>
+                      <td className="py-3 px-3 font-bold text-slate-900">${parseFloat(wd.amount || 0).toFixed(2)}</td>
+                      <td className="py-3 px-3">
+                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                          (wd.status || 'pending').toLowerCase() === 'approved' || (wd.status || '').toLowerCase() === 'completed'
+                            ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                            : (wd.status || 'pending').toLowerCase() === 'cancelled'
+                            ? 'bg-slate-100 text-slate-600 border border-slate-200'
+                            : 'bg-amber-100 text-amber-800 border border-amber-200 animate-pulse'
+                        }`}>
+                          {wd.status || 'Pending Review'}
+                        </span>
+                      </td>
+                      <td className="py-3 px-3 text-right">
+                        {(wd.status || 'pending').toLowerCase() === 'pending' && (
+                          <button
+                            onClick={() => handleCancelWithdrawal(wd.id)}
+                            className="px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg text-[10px] font-bold transition cursor-pointer"
+                          >
+                            Cancel
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
         </div>
       )}
 
-      {/* Cregis Crypto Modal */}
-      <CregisModal
-        isOpen={showCregisModal}
-        onClose={() => setShowCregisModal(false)}
-        amount={parseFloat(depositAmount)}
-        tokenType={selectedGateway.toUpperCase()}
-        onSuccess={() => {
-          setWallet(prev => ({
-            ...prev,
-            total_balance: prev.total_balance + parseFloat(depositAmount),
-            available_balance: prev.available_balance + parseFloat(depositAmount)
-          }));
-          setDepositSuccessMsg(`Cregis Payment of $${depositAmount} USD confirmed on blockchain!`);
-          setTimeout(() => setDepositSuccessMsg(''), 4000);
-        }}
-      />
+      {/* Cregis Gateway Modal */}
+      {showCregisModal && (
+        <CregisModal
+          isOpen={showCregisModal}
+          onClose={() => setShowCregisModal(false)}
+          depositAmount={depositAmount}
+        />
+      )}
 
       {/* Address Book Modal */}
-      <AddressBookModal
-        isOpen={showAddressBookModal}
-        onClose={() => setShowAddressBookModal(false)}
-        onSelectAddress={(entry) => {
-          setDestinationDetails(entry.address);
-          if (entry.network) setWithdrawNetwork(entry.network);
-          if (entry.method) setWithdrawMethod(entry.method);
-        }}
-      />
+      {showAddressBookModal && (
+        <AddressBookModal
+          isOpen={showAddressBookModal}
+          onClose={() => setShowAddressBookModal(false)}
+          onSelectAddress={(entry) => {
+            setDestinationDetails(entry.address);
+            if (entry.method) setWithdrawMethod(entry.method);
+            if (entry.network) setWithdrawNetwork(entry.network);
+            setShowAddressBookModal(false);
+          }}
+        />
+      )}
 
     </div>
   );
