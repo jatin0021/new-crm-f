@@ -27,6 +27,7 @@ import {
   ArrowLeft
 } from 'lucide-react';
 import { useAlert } from '../../context/AlertContext';
+import { getApiUrl } from '../../config/api';
 import DepositGatewayDirectory from '../../components/common/DepositGatewayDirectory';
 import CregisModal from '../../components/common/CregisModal';
 import AddressBookModal from '../../components/common/AddressBookModal';
@@ -204,28 +205,28 @@ export default function FundsPage() {
         const token = localStorage.getItem('crm_jwt_token') || sessionStorage.getItem('crm_jwt_token');
         
         // Wallet
-        const res = await fetch('/api/financials/wallet', { headers: { 'Authorization': `Bearer ${token}` } });
+        const res = await fetch(getApiUrl('/api/financials/wallet'), { headers: { 'Authorization': `Bearer ${token}` } });
         if (res.ok) {
           const data = await res.json();
           if (data.data?.wallet) setWallet(data.data.wallet);
         }
 
         // Accounts
-        const accRes = await fetch('/api/trading-accounts', { headers: { 'Authorization': `Bearer ${token}` } });
+        const accRes = await fetch(getApiUrl('/api/trading-accounts'), { headers: { 'Authorization': `Bearer ${token}` } });
         if (accRes.ok) {
           const accData = await accRes.json();
           if (accData.data?.accounts) setAccounts(accData.data.accounts);
         }
 
         // Deposits History
-        const depRes = await fetch('/api/financials/deposits', { headers: { 'Authorization': `Bearer ${token}` } });
+        const depRes = await fetch(getApiUrl('/api/financials/deposits'), { headers: { 'Authorization': `Bearer ${token}` } });
         if (depRes.ok) {
           const depData = await depRes.json();
           if (depData.data?.deposits) setDepositsTracker(depData.data.deposits);
         }
 
         // Withdrawals History
-        const wdRes = await fetch('/api/financials/withdrawals', { headers: { 'Authorization': `Bearer ${token}` } });
+        const wdRes = await fetch(getApiUrl('/api/financials/withdrawals'), { headers: { 'Authorization': `Bearer ${token}` } });
         if (wdRes.ok) {
           const wdData = await wdRes.json();
           if (wdData.data?.withdrawals) setWithdrawalsTracker(wdData.data.withdrawals);
@@ -257,7 +258,7 @@ export default function FundsPage() {
     setSubmittingDeposit(true);
     try {
       const token = localStorage.getItem('crm_jwt_token') || sessionStorage.getItem('crm_jwt_token');
-      const res = await fetch('/api/financials/deposits', {
+      const res = await fetch(getApiUrl('/api/financials/deposits'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -309,7 +310,7 @@ export default function FundsPage() {
 
     try {
       const token = localStorage.getItem('crm_jwt_token') || sessionStorage.getItem('crm_jwt_token');
-      const res = await fetch('/api/financials/withdrawals', {
+      const res = await fetch(getApiUrl('/api/financials/withdrawals'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -356,7 +357,7 @@ export default function FundsPage() {
   const handleCancelWithdrawal = async (wdId) => {
     try {
       const token = localStorage.getItem('crm_jwt_token') || sessionStorage.getItem('crm_jwt_token');
-      const res = await fetch('/api/financials/withdrawals/cancel', {
+      const res = await fetch(getApiUrl('/api/financials/withdrawals/cancel'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

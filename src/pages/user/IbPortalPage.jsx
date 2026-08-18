@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAlert } from '../../context/AlertContext';
+import { getApiUrl } from '../../config/api';
 import { 
   Users, 
   Share2, 
@@ -50,8 +51,8 @@ export default function IbPortalPage() {
       try {
         const token = localStorage.getItem('crm_jwt_token') || sessionStorage.getItem('crm_jwt_token');
         const [profRes, clientRes] = await Promise.all([
-          fetch('/api/ib/profile', { headers: { 'Authorization': `Bearer ${token}` } }),
-          fetch('/api/ib/clients', { headers: { 'Authorization': `Bearer ${token}` } })
+          fetch(getApiUrl('/api/ib/profile'), { headers: { 'Authorization': `Bearer ${token}` } }),
+          fetch(getApiUrl('/api/ib/clients'), { headers: { 'Authorization': `Bearer ${token}` } })
         ]);
 
         if (profRes.ok) {
@@ -87,7 +88,7 @@ export default function IbPortalPage() {
 
     try {
       const token = localStorage.getItem('crm_jwt_token') || sessionStorage.getItem('crm_jwt_token');
-      const res = await fetch('/api/ib/transfer-commission', {
+      const res = await fetch(getApiUrl('/api/ib/transfer-commission'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -116,7 +117,7 @@ export default function IbPortalPage() {
     e.preventDefault();
     try {
       const token = localStorage.getItem('crm_jwt_token') || sessionStorage.getItem('crm_jwt_token');
-      const res = await fetch('/api/ib/apply', {
+      const res = await fetch(getApiUrl('/api/ib/apply'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

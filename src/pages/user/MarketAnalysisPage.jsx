@@ -117,19 +117,19 @@ export default function MarketAnalysisPage() {
   useEffect(() => {
     const fetchAnalysisData = async () => {
       try {
-        const insRes = await fetch('/api/analysis/insights');
+        const insRes = await fetch(getApiUrl('/api/analysis/insights'));
         if (insRes.ok) {
           const insData = await insRes.json();
           if (insData.data?.insights) setInsights(insData.data.insights);
         }
 
-        const calRes = await fetch('/api/analysis/calendar');
+        const calRes = await fetch(getApiUrl('/api/analysis/calendar'));
         if (calRes.ok) {
           const calData = await calRes.json();
           if (calData.data?.calendar) setCalendar(calData.data.calendar);
         }
 
-        const newsRes = await fetch('/api/analysis/news');
+        const newsRes = await fetch(getApiUrl('/api/analysis/news'));
         if (newsRes.ok) {
           const newsData = await newsRes.json();
           if (newsData.data?.news) setNews(newsData.data.news);

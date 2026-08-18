@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { CheckCircle2, Clock, XCircle, AlertCircle, Lock, ArrowRight } from 'lucide-react';
+import { getApiUrl } from '../../config/api';
 
 export default function VerificationBanner({ currentUser = null, onVerify = () => {} }) {
   const [userProfile, setUserProfile] = useState(() => {
@@ -24,8 +25,8 @@ export default function VerificationBanner({ currentUser = null, onVerify = () =
     if (!token) return;
     try {
       const [kycRes, profileRes] = await Promise.all([
-        fetch('/api/kyc/status', { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch('/api/user/profile', { headers: { 'Authorization': `Bearer ${token}` } })
+        fetch(getApiUrl('/api/kyc/status'), { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch(getApiUrl('/api/user/profile'), { headers: { 'Authorization': `Bearer ${token}` } })
       ]);      const parseJsonSafely = async (res) => {
         if (!res || !res.ok) return null;
         try {

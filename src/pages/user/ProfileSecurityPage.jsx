@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAlert } from '../../context/AlertContext';
+import { getApiUrl } from '../../config/api';
 import { 
   User, 
   ShieldCheck, 
@@ -93,7 +94,7 @@ export default function ProfileSecurityPage({ defaultSubTab = 'profile' }) {
   const fetchKycStatus = async () => {
     try {
       const token = localStorage.getItem('crm_jwt_token') || sessionStorage.getItem('crm_jwt_token');
-      const kycRes = await fetch('/api/kyc/status', {
+      const kycRes = await fetch(getApiUrl('/api/kyc/status'), {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (kycRes.ok) {
@@ -125,7 +126,7 @@ export default function ProfileSecurityPage({ defaultSubTab = 'profile' }) {
     const fetchProfileData = async () => {
       try {
         const token = localStorage.getItem('crm_jwt_token') || sessionStorage.getItem('crm_jwt_token');
-        const res = await fetch('/api/user/profile', {
+        const res = await fetch(getApiUrl('/api/user/profile'), {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         if (res.ok) {
@@ -164,7 +165,7 @@ export default function ProfileSecurityPage({ defaultSubTab = 'profile' }) {
 
     try {
       const token = localStorage.getItem('crm_jwt_token') || sessionStorage.getItem('crm_jwt_token');
-      const res = await fetch('/api/user/profile', {
+      const res = await fetch(getApiUrl('/api/user/profile'), {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -200,7 +201,7 @@ export default function ProfileSecurityPage({ defaultSubTab = 'profile' }) {
   const handleInit2FA = async () => {
     try {
       const token = localStorage.getItem('crm_jwt_token') || sessionStorage.getItem('crm_jwt_token');
-      const res = await fetch('/api/user/2fa/setup', {
+      const res = await fetch(getApiUrl('/api/user/2fa/setup'), {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -218,7 +219,7 @@ export default function ProfileSecurityPage({ defaultSubTab = 'profile' }) {
   const handleVerify2FATotp = async (otpCode) => {
     if (!totpSetupData) return;
     const token = localStorage.getItem('crm_jwt_token') || sessionStorage.getItem('crm_jwt_token');
-    const res = await fetch('/api/user/2fa/verify', {
+    const res = await fetch(getApiUrl('/api/user/2fa/verify'), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -243,7 +244,7 @@ export default function ProfileSecurityPage({ defaultSubTab = 'profile' }) {
   // Disable 2FA Handler
   const handleDisable2FA = async (otpCode) => {
     const token = localStorage.getItem('crm_jwt_token') || sessionStorage.getItem('crm_jwt_token');
-    const res = await fetch('/api/user/2fa/disable', {
+    const res = await fetch(getApiUrl('/api/user/2fa/disable'), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -279,7 +280,7 @@ export default function ProfileSecurityPage({ defaultSubTab = 'profile' }) {
     setSavingPass(true);
     try {
       const token = localStorage.getItem('crm_jwt_token') || sessionStorage.getItem('crm_jwt_token');
-      const res = await fetch('/api/user/change-password', {
+      const res = await fetch(getApiUrl('/api/user/change-password'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -334,7 +335,7 @@ export default function ProfileSecurityPage({ defaultSubTab = 'profile' }) {
       formData.append('documentType', manualDocCategory);
       formData.append('idType', manualIdType);
 
-      const res = await fetch('/api/kyc/upload', {
+      const res = await fetch(getApiUrl('/api/kyc/upload'), {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` },
         body: formData

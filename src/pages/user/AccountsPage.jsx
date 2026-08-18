@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAlert } from '../../context/AlertContext';
+import { getApiUrl } from '../../config/api';
 import { 
   Plus, 
   PlusCircle,
@@ -78,7 +79,7 @@ export default function AccountsPage() {
     const fetchAccountsData = async () => {
       try {
         const token = localStorage.getItem('crm_jwt_token') || sessionStorage.getItem('crm_jwt_token');
-        const res = await fetch('/api/trading-accounts', {
+        const res = await fetch(getApiUrl('/api/trading-accounts'), {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         if (res.ok) {
@@ -99,7 +100,7 @@ export default function AccountsPage() {
   const handleLaunchWebTrader = async (loginNumber) => {
     try {
       const token = localStorage.getItem('crm_jwt_token') || sessionStorage.getItem('crm_jwt_token');
-      const res = await fetch('/api/trading-accounts/sso-token', {
+      const res = await fetch(getApiUrl('/api/trading-accounts/sso-token'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -148,7 +149,7 @@ export default function AccountsPage() {
         demoTopUp: createForm.initial_demo_balance || 10000
       };
 
-      const res = await fetch('/api/trading-accounts/create', {
+      const res = await fetch(getApiUrl('/api/trading-accounts/create'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -182,7 +183,7 @@ export default function AccountsPage() {
     setToppingUp(true);
     try {
       const token = localStorage.getItem('crm_jwt_token') || sessionStorage.getItem('crm_jwt_token');
-      const res = await fetch('/api/trading-accounts/demo-topup', {
+      const res = await fetch(getApiUrl('/api/trading-accounts/demo-topup'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -18,6 +18,7 @@ import ResetPasswordPage from './pages/auth/ResetPasswordPage';
 import ActivateAccountPage from './pages/auth/ActivateAccountPage';
 import ImpersonationBanner from './components/common/ImpersonationBanner';
 import ActivationBanner from './components/common/ActivationBanner';
+import { API_BASE_URL, getApiUrl, safeJsonFetch } from './config/api';
 import SessionTimeoutModal from './components/common/SessionTimeoutModal';
 import { ShieldCheck, LogOut, ArrowLeft } from 'lucide-react';
 
@@ -96,25 +97,28 @@ export default function App() {
       if (!token) return;
 
       try {
-        const res = await fetch('/api/user/profile', {
+        const res = await fetch(getApiUrl('/api/user/profile'), {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         if (res.ok) {
-          const data = await res.json();
-          if (data.data?.profile) {
-            const updatedProfile = data.data.profile;
-            setCurrentUser(prev => {
-              if (!prev || prev.kyc_status !== updatedProfile.kyc_status || prev.email_verified !== updatedProfile.email_verified || prev.first_name !== updatedProfile.first_name || prev.last_name !== updatedProfile.last_name) {
-                if (localStorage.getItem('crm_user')) {
-                  localStorage.setItem('crm_user', JSON.stringify(updatedProfile));
+          const text = await res.text();
+          if (text && !text.trim().startsWith('<')) {
+            const data = JSON.parse(text);
+            if (data.data?.profile) {
+              const updatedProfile = data.data.profile;
+              setCurrentUser(prev => {
+                if (!prev || prev.kyc_status !== updatedProfile.kyc_status || prev.email_verified !== updatedProfile.email_verified || prev.first_name !== updatedProfile.first_name || prev.last_name !== updatedProfile.last_name) {
+                  if (localStorage.getItem('crm_user')) {
+                    localStorage.setItem('crm_user', JSON.stringify(updatedProfile));
+                  }
+                  if (sessionStorage.getItem('crm_user')) {
+                    sessionStorage.setItem('crm_user', JSON.stringify(updatedProfile));
+                  }
+                  return updatedProfile;
                 }
-                if (sessionStorage.getItem('crm_user')) {
-                  sessionStorage.setItem('crm_user', JSON.stringify(updatedProfile));
-                }
-                return updatedProfile;
-              }
-              return prev;
-            });
+                return prev;
+              });
+            }
           }
         } else if (res.status === 404 || res.status === 401 || res.status === 403) {
           // Stale or deleted user session - clear credentials and log out cleanly
@@ -126,7 +130,7 @@ export default function App() {
           setAuthView('login');
         }
       } catch (e) {
-        console.warn('App profile sync warning:', e.message);
+        // Silent catch for polling
       }
     };
 
@@ -187,7 +191,7 @@ export default function App() {
 
   // Resend Activation Email Handler
   const handleResendVerification = async (email) => {
-    const res = await fetch('/api/auth/resend-verification', {
+    const res = await fetch(getApiUrl('/api/auth/resend-verification'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email })
@@ -206,7 +210,7 @@ export default function App() {
         targetId = 1;
       }
 
-      const res = await fetch('/api/admin/impersonate', {
+      const res = await fetch(getApiUrl('/api/admin/impersonate'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

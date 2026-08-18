@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAlert } from '../../context/AlertContext';
+import { getApiUrl } from '../../config/api';
 import { 
   Users, 
   User,
@@ -319,17 +320,17 @@ export default function AdminDashboard({ adminUser = {}, onImpersonate = () => {
     const token = localStorage.getItem('crm_admin_token') || localStorage.getItem('crm_jwt_token');
     try {
       const [usersRes, analyticsRes, healthRes, terminalRes, accountsRes, posRes, ordRes, symRes, depLedgerRes, wdLedgerRes, kycRes] = await Promise.all([
-        fetch('/api/admin/users', { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch('/api/admin/analytics/overview', { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch('/api/admin/system-health', { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch('/api/admin/terminal/overview', { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch('/api/admin/terminal/accounts', { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch('/api/admin/terminal/positions', { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch('/api/admin/terminal/orders', { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch('/api/admin/terminal/symbols', { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch('/api/admin/financial-ops/deposits/ledgers', { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch('/api/admin/financial-ops/withdrawals/ledgers', { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch('/api/admin/kyc', { headers: { 'Authorization': `Bearer ${token}` } })
+        fetch(getApiUrl('/api/admin/users'), { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch(getApiUrl('/api/admin/analytics/overview'), { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch(getApiUrl('/api/admin/system-health'), { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch(getApiUrl('/api/admin/terminal/overview'), { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch(getApiUrl('/api/admin/terminal/accounts'), { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch(getApiUrl('/api/admin/terminal/positions'), { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch(getApiUrl('/api/admin/terminal/orders'), { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch(getApiUrl('/api/admin/terminal/symbols'), { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch(getApiUrl('/api/admin/financial-ops/deposits/ledgers'), { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch(getApiUrl('/api/admin/financial-ops/withdrawals/ledgers'), { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch(getApiUrl('/api/admin/kyc'), { headers: { 'Authorization': `Bearer ${token}` } })
       ]);
 
       const parseJsonSafely = async (res) => {
@@ -434,7 +435,7 @@ export default function AdminDashboard({ adminUser = {}, onImpersonate = () => {
       async () => {
         const token = localStorage.getItem('crm_admin_token');
         try {
-          const res = await fetch('/api/admin/users', {
+          const res = await fetch(getApiUrl('/api/admin/users'), {
             method: 'DELETE',
             headers: { 'Authorization': `Bearer ${token}` }
           });
@@ -460,7 +461,7 @@ export default function AdminDashboard({ adminUser = {}, onImpersonate = () => {
   const handleReviewDepositAction = async (id, action) => {
     const token = localStorage.getItem('crm_admin_token');
     try {
-      await fetch('/api/admin/financial-ops/deposits/review', {
+      await fetch(getApiUrl('/api/admin/financial-ops/deposits/review'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ deposit_id: id, action })
@@ -475,7 +476,7 @@ export default function AdminDashboard({ adminUser = {}, onImpersonate = () => {
   const handleReviewWithdrawalAction = async (id, action) => {
     const token = localStorage.getItem('crm_admin_token');
     try {
-      await fetch('/api/admin/financial-ops/withdrawals/review', {
+      await fetch(getApiUrl('/api/admin/financial-ops/withdrawals/review'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ withdrawal_id: id, action, tx_hash: payoutTxHashInput })
@@ -492,7 +493,7 @@ export default function AdminDashboard({ adminUser = {}, onImpersonate = () => {
   const handleVerifyPaymentDetail = async (id, action) => {
     const token = localStorage.getItem('crm_admin_token');
     try {
-      await fetch('/api/admin/financial-ops/user-payment-details/verify', {
+      await fetch(getApiUrl('/api/admin/financial-ops/user-payment-details/verify'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ detail_id: id, action })
@@ -513,7 +514,7 @@ export default function AdminDashboard({ adminUser = {}, onImpersonate = () => {
     }
     const token = localStorage.getItem('crm_admin_token');
     try {
-      const res = await fetch('/api/admin/financial-ops/balance-adjustment', {
+      const res = await fetch(getApiUrl('/api/admin/financial-ops/balance-adjustment'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ user_email_or_id: adjUser, adjustment_type: adjType, amount: adjAmount, memo_note: adjMemo })
@@ -535,7 +536,7 @@ export default function AdminDashboard({ adminUser = {}, onImpersonate = () => {
   const handleForceClosePosition = async (ticket) => {
     const token = localStorage.getItem('crm_admin_token');
     try {
-      await fetch('/api/admin/terminal/positions/close', {
+      await fetch(getApiUrl('/api/admin/terminal/positions/close'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ ticket, admin_notes: 'Emergency Admin Liquidate Override' })
@@ -550,7 +551,7 @@ export default function AdminDashboard({ adminUser = {}, onImpersonate = () => {
   const handleCancelOrder = async (ticket) => {
     const token = localStorage.getItem('crm_admin_token');
     try {
-      await fetch('/api/admin/terminal/orders/cancel', {
+      await fetch(getApiUrl('/api/admin/terminal/orders/cancel'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ ticket })
@@ -565,7 +566,7 @@ export default function AdminDashboard({ adminUser = {}, onImpersonate = () => {
   const handleUpdateSymbolSpread = async (symbol, markupStandard, markupEcn, markupVip) => {
     const token = localStorage.getItem('crm_admin_token');
     try {
-      await fetch('/api/admin/terminal/symbols', {
+      await fetch(getApiUrl('/api/admin/terminal/symbols'), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ symbol, markupStandard, markupEcn, markupVip })
@@ -582,7 +583,7 @@ export default function AdminDashboard({ adminUser = {}, onImpersonate = () => {
     setRiskConfigMsg({ type: '', text: '' });
     const token = localStorage.getItem('crm_admin_token');
     try {
-      const res = await fetch('/api/admin/terminal/risk-limits', {
+      const res = await fetch(getApiUrl('/api/admin/terminal/risk-limits'), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify(riskLimits)
@@ -600,7 +601,7 @@ export default function AdminDashboard({ adminUser = {}, onImpersonate = () => {
     setProfileMsg({ type: '', text: '' });
     const token = localStorage.getItem('crm_admin_token');
     try {
-      const res = await fetch('/api/admin/profile', {
+      const res = await fetch(getApiUrl('/api/admin/profile'), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ name: profileName, email: profileEmail })
@@ -631,7 +632,7 @@ export default function AdminDashboard({ adminUser = {}, onImpersonate = () => {
     }
     const token = localStorage.getItem('crm_admin_token');
     try {
-      const res = await fetch('/api/admin/change-password', {
+      const res = await fetch(getApiUrl('/api/admin/change-password'), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ currentPassword, newPassword })

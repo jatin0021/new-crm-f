@@ -77,7 +77,7 @@ export default function SupportHelpdeskPage() {
     const fetchSupportData = async () => {
       try {
         const token = localStorage.getItem('crm_jwt_token') || sessionStorage.getItem('crm_jwt_token');
-        const res = await fetch('/api/support/tickets', {
+        const res = await fetch(getApiUrl('/api/support/tickets'), {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         if (res.ok) {
@@ -88,7 +88,7 @@ export default function SupportHelpdeskPage() {
           }
         }
 
-        const faqRes = await fetch('/api/support/faqs', {
+        const faqRes = await fetch(getApiUrl('/api/support/faqs'), {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         if (faqRes.ok) {
@@ -110,7 +110,7 @@ export default function SupportHelpdeskPage() {
 
     try {
       const token = localStorage.getItem('crm_jwt_token') || sessionStorage.getItem('crm_jwt_token');
-      const res = await fetch('/api/support/tickets', {
+      const res = await fetch(getApiUrl('/api/support/tickets'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
