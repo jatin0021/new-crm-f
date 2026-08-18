@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useAlert } from '../../context/AlertContext';
 import { Eye, EyeOff, Mail, Phone, Lock, AlertCircle, ArrowRight, User, CheckSquare, Square } from 'lucide-react';
 import AuthLayout from '../../components/auth/AuthLayout';
-import { API_BASE_URL } from '../../config/api';
+import { API_BASE_URL, safeJsonFetch } from '../../config/api';
 
 export default function LoginPage({ onLoginSuccess = () => {}, onNavigate = () => {} }) {
   const { alertInfo } = useAlert();
@@ -28,24 +28,13 @@ export default function LoginPage({ onLoginSuccess = () => {}, onNavigate = () =
         ...(activeLoginTab === 'email' ? { email } : { phone })
       };
 
-      const response = await fetch('/api/auth/login', {
+      const data = await safeJsonFetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
 
-      let data = {};
-      const responseText = await response.text();
-      try {
-        data = JSON.parse(responseText);
-      } catch (jsonErr) {
-        if (response.status === 502) {
-          throw new Error('Backend server is temporarily unreachable (502 Bad Gateway).');
-        }
-        throw new Error(`Server response error (${response.status})`);
-      }
-
-      if (response.ok && (data.ok || data.success) && data.data?.token) {
+      if (data.ok && (data.ok || data.success) && data.data?.token) {
         const token = data.data.token;
         const user = data.data.user;
 

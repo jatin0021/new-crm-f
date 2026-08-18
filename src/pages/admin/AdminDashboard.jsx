@@ -332,59 +332,58 @@ export default function AdminDashboard({ adminUser = {}, onImpersonate = () => {
         fetch('/api/admin/kyc', { headers: { 'Authorization': `Bearer ${token}` } })
       ]);
 
-      if (usersRes.ok) {
-        const uData = await usersRes.json();
-        if (uData.data?.users) setUsers(uData.data.users);
-      }
-      if (analyticsRes.ok) {
-        const aData = await analyticsRes.json();
-        if (aData.data) setAnalyticsData(prev => ({ ...prev, ...aData.data }));
-      }
-      if (healthRes.ok) {
-        const hData = await healthRes.json();
-        if (hData.data) setSystemHealth(hData.data);
-      }
-      if (terminalRes.ok) {
-        const tData = await terminalRes.json();
-        if (tData.data) setTerminalOverview(tData.data);
-      }
-      if (accountsRes.ok) {
-        const accData = await accountsRes.json();
-        if (accData.data?.accounts) setLiveTradingAccounts(accData.data.accounts);
-      }
-      if (posRes.ok) {
-        const pData = await posRes.json();
-        if (pData.data?.positions) setOpenPositions(pData.data.positions);
-      }
-      if (ordRes.ok) {
-        const oData = await ordRes.json();
-        if (oData.data?.orders) setOpenOrders(oData.data.orders);
-      }
-      if (symRes.ok) {
-        const sData = await symRes.json();
-        if (sData.data?.symbols) setSymbols(sData.data.symbols);
-      }
-      if (depLedgerRes.ok) {
-        const dL = await depLedgerRes.json();
-        if (dL.data?.masterLedger) setDepositsMaster(dL.data.masterLedger);
-      }
-      if (wdLedgerRes.ok) {
-        const wL = await wdLedgerRes.json();
-        if (wL.data?.masterLedger) setWithdrawalsMaster(wL.data.masterLedger);
-      }
-      if (kycRes.ok) {
-        const kData = await kycRes.json();
-        if (kData.data?.manual_documents) {
-          const normalizedKyc = kData.data.manual_documents.map(d => ({
-            ...d,
-            name: (d.first_name || d.last_name) ? `${d.first_name || ''} ${d.last_name || ''}`.trim() : (d.email || `Trader #${d.user_id}`),
-            email: d.email || 'N/A'
-          }));
-          setKycRequests(normalizedKyc);
+      const parseJsonSafely = async (res) => {
+        if (!res || !res.ok) return null;
+        try {
+          const text = await res.text();
+          if (!text || text.trim().startsWith('<')) return null;
+          return JSON.parse(text);
+        } catch (e) {
+          return null;
         }
+      };
+
+      const uData = await parseJsonSafely(usersRes);
+      if (uData?.data?.users) setUsers(uData.data.users);
+
+      const aData = await parseJsonSafely(analyticsRes);
+      if (aData?.data) setAnalyticsData(prev => ({ ...prev, ...aData.data }));
+
+      const hData = await parseJsonSafely(healthRes);
+      if (hData?.data) setSystemHealth(hData.data);
+
+      const tData = await parseJsonSafely(terminalRes);
+      if (tData?.data) setTerminalOverview(tData.data);
+
+      const accData = await parseJsonSafely(accountsRes);
+      if (accData?.data?.accounts) setLiveTradingAccounts(accData.data.accounts);
+
+      const pData = await parseJsonSafely(posRes);
+      if (pData?.data?.positions) setOpenPositions(pData.data.positions);
+
+      const oData = await parseJsonSafely(ordRes);
+      if (oData?.data?.orders) setOpenOrders(oData.data.orders);
+
+      const sData = await parseJsonSafely(symRes);
+      if (sData?.data?.symbols) setSymbols(sData.data.symbols);
+
+      const dL = await parseJsonSafely(depLedgerRes);
+      if (dL?.data?.masterLedger) setDepositsMaster(dL.data.masterLedger);
+
+      const wL = await parseJsonSafely(wdLedgerRes);
+      if (wL?.data?.masterLedger) setWithdrawalsMaster(wL.data.masterLedger);
+
+      const kData = await parseJsonSafely(kycRes);
+      if (kData?.data?.manual_documents) {
+        const normalizedKyc = kData.data.manual_documents.map(d => ({
+          ...d,
+          name: (d.first_name || d.last_name) ? `${d.first_name || ''} ${d.last_name || ''}`.trim() : (d.email || `Trader #${d.user_id}`),
+          email: d.email || 'N/A'
+        }));
+        setKycRequests(normalizedKyc);
       }
     } catch (e) {
-      console.warn('API sync warning:', e.message);
+      console.warn('API sync notice:', e.message);
     } finally {
       setLoadingData(false);
     }

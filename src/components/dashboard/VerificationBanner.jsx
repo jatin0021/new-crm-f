@@ -26,31 +26,36 @@ export default function VerificationBanner({ currentUser = null, onVerify = () =
       const [kycRes, profileRes] = await Promise.all([
         fetch('/api/kyc/status', { headers: { 'Authorization': `Bearer ${token}` } }),
         fetch('/api/user/profile', { headers: { 'Authorization': `Bearer ${token}` } })
-      ]);
-
-      if (kycRes.ok) {
-        const kycData = await kycRes.json();
-        if (kycData.data?.kyc_status) {
-          const newSt = kycData.data.kyc_status.toLowerCase();
-          setKycStatus(newSt);
-          try {
-            const userObj = JSON.parse(localStorage.getItem('crm_user') || '{}');
-            if (userObj.kyc_status !== newSt) {
-              userObj.kyc_status = newSt;
-              localStorage.setItem('crm_user', JSON.stringify(userObj));
-            }
-          } catch (err) {}
+      ]);      const parseJsonSafely = async (res) => {
+        if (!res || !res.ok) return null;
+        try {
+          const text = await res.text();
+          if (!text || text.trim().startsWith('<')) return null;
+          return JSON.parse(text);
+        } catch (e) {
+          return null;
         }
+      };
+
+      const kycData = await parseJsonSafely(kycRes);
+      if (kycData?.data?.kyc_status) {
+        const newSt = kycData.data.kyc_status.toLowerCase();
+        setKycStatus(newSt);
+        try {
+          const userObj = JSON.parse(localStorage.getItem('crm_user') || '{}');
+          if (userObj.kyc_status !== newSt) {
+            userObj.kyc_status = newSt;
+            localStorage.setItem('crm_user', JSON.stringify(userObj));
+          }
+        } catch (err) {}
       }
 
-      if (profileRes.ok) {
-        const profData = await profileRes.json();
-        if (profData.data?.profile) {
-          setUserProfile(prev => ({ ...prev, ...profData.data.profile }));
-        }
+      const profData = await parseJsonSafely(profileRes);
+      if (profData?.data?.profile) {
+        setUserProfile(prev => ({ ...prev, ...profData.data.profile }));
       }
     } catch (e) {
-      console.warn('Dashboard banner sync warning:', e.message);
+      // Silent catch
     }
   };
 

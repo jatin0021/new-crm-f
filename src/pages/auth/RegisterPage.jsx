@@ -100,29 +100,18 @@ export default function RegisterPage({ onRegisterSuccess = () => {}, onNavigate 
         turnstile_token: turnstileToken
       };
 
-      const response = await fetch('/api/auth/register', {
+      const result = await safeJsonFetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
 
-      let data = {};
-      const responseText = await response.text();
-      try {
-        data = JSON.parse(responseText);
-      } catch (jsonErr) {
-        if (response.status === 502) {
-          throw new Error('Backend server is temporarily unreachable (502 Bad Gateway). Please ensure server is active.');
-        }
-        throw new Error(`Server error (${response.status})`);
-      }
-
-      if (response.ok && (data.ok || data.success) && data.data?.token) {
-        localStorage.setItem('crm_jwt_token', data.data.token);
-        localStorage.setItem('crm_user', JSON.stringify(data.data.user));
-        onRegisterSuccess(data.data.user);
+      if (result.ok && (result.ok || result.success) && result.data?.token) {
+        localStorage.setItem('crm_jwt_token', result.data.token);
+        localStorage.setItem('crm_user', JSON.stringify(result.data.user));
+        onRegisterSuccess(result.data.user);
       } else {
-        setErrorMessage(data.message || data.error || 'Registration failed.');
+        setErrorMessage(result.message || result.error || 'Registration failed.');
       }
     } catch (err) {
       setErrorMessage(err.message || 'Server connection error.');

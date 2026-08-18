@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Lock, Eye, EyeOff, CheckCircle2, AlertCircle, ArrowRight, ArrowLeft, ShieldCheck, KeyRound } from 'lucide-react';
 import AuthLayout from '../../components/auth/AuthLayout';
 import PasswordStrengthBar from '../../components/common/PasswordStrengthBar';
+import { safeJsonFetch } from '../../config/api';
 
 export default function ResetPasswordPage({ onNavigate = () => {} }) {
   // Extract token & email from URL parameters
@@ -32,14 +33,13 @@ export default function ResetPasswordPage({ onNavigate = () => {} }) {
 
     const validateToken = async () => {
       try {
-        const response = await fetch('/api/auth/validate-reset-token', {
+        const data = await safeJsonFetch('/api/auth/validate-reset-token', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ token, email: emailParam })
         });
 
-        const data = await response.json();
-        if (response.ok && (data.ok || data.success)) {
+        if (data.ok && (data.ok || data.success)) {
           setTokenValid(true);
         } else {
           setTokenValid(false);
@@ -73,7 +73,7 @@ export default function ResetPasswordPage({ onNavigate = () => {} }) {
     setLoading(true);
 
     try {
-      const response = await fetch('/api/auth/reset-password', {
+      const data = await safeJsonFetch('/api/auth/reset-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -84,9 +84,7 @@ export default function ResetPasswordPage({ onNavigate = () => {} }) {
         })
       });
 
-      const data = await response.json();
-
-      if (response.ok && (data.ok || data.success)) {
+      if (data.ok && (data.ok || data.success)) {
         setSuccessMessage('Your password has been updated successfully! You can now sign in with your new password.');
       } else {
         setErrorMessage(data.message || 'Failed to update password. Please try again.');
