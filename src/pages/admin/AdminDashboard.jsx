@@ -951,7 +951,7 @@ export default function AdminDashboard({ adminUser = {}, onImpersonate = () => {
                         <td className="py-3.5 font-bold text-slate-900 flex items-center gap-2">
                           {dep.user}
                           <button 
-                            onClick={() => onImpersonate(dep.user)}
+                            onClick={() => onImpersonate(dep.user_id || dep.user)}
                             className="px-2 py-0.5 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded-full text-[9px] font-black border border-emerald-200 cursor-pointer inline-flex items-center gap-0.5"
                           >
                             Login-As <ArrowUpRight className="w-2.5 h-2.5" />
@@ -1054,7 +1054,7 @@ export default function AdminDashboard({ adminUser = {}, onImpersonate = () => {
                         <td className="py-3.5 font-bold text-slate-900 flex items-center gap-2">
                           {wd.user}
                           <button 
-                            onClick={() => onImpersonate(wd.user)}
+                            onClick={() => onImpersonate(wd.user_id || wd.user)}
                             className="px-2 py-0.5 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded-full text-[9px] font-black border border-emerald-200 cursor-pointer inline-flex items-center gap-0.5"
                           >
                             Login-As <ArrowUpRight className="w-2.5 h-2.5" />
@@ -1665,7 +1665,7 @@ export default function AdminDashboard({ adminUser = {}, onImpersonate = () => {
                             <User className="w-3.5 h-3.5 text-cyan-600" /> User Info
                           </button>
                           <button
-                            onClick={() => onImpersonate(u.email)}
+                            onClick={() => onImpersonate(u.id || u.email)}
                             className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl text-xs flex items-center gap-1 shadow-xs cursor-pointer active:scale-95"
                             title="1-Click Login As Trader"
                           >
@@ -1957,7 +1957,7 @@ export default function AdminDashboard({ adminUser = {}, onImpersonate = () => {
                     <button
                       onClick={() => {
                         setIsUserDetailsModalOpen(false);
-                        onImpersonate(selectedUserForModal.email);
+                        onImpersonate(selectedUserForModal.id || selectedUserForModal.email);
                       }}
                       className="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full text-xs font-black inline-flex items-center gap-1 shadow-xs cursor-pointer active:scale-95 transition-all"
                     >

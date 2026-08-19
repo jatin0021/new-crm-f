@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAlert } from '../../context/AlertContext';
-import { Eye, EyeOff, Mail, User, Globe, Phone, Lock, Tag, AlertCircle, ArrowRight, Check, Sparkles } from 'lucide-react';
+import { Eye, EyeOff, Mail, User, Globe, Lock, Tag, AlertCircle, ArrowRight, Check, Sparkles } from 'lucide-react';
 import AuthLayout from '../../components/auth/AuthLayout';
 import PasswordStrengthBar from '../../components/common/PasswordStrengthBar';
 import { API_BASE_URL, safeJsonFetch } from '../../config/api';
@@ -12,7 +12,6 @@ export default function RegisterPage({ onRegisterSuccess = () => {}, onNavigate 
     last_name: '',
     email: '',
     country: 'United States',
-    phone: '',
     password: '',
     confirm_password: '',
     referral_code: '',
@@ -53,7 +52,6 @@ export default function RegisterPage({ onRegisterSuccess = () => {}, onNavigate 
   const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim());
   const isFirstNameValid = formData.first_name.trim().length >= 2;
   const isLastNameValid = formData.last_name.trim().length >= 2;
-  const isPhoneValid = !formData.phone || formData.phone.trim().length >= 6;
   const isPasswordMatch = formData.password && formData.password === formData.confirm_password;
 
   const handleChange = (e) => {
@@ -204,50 +202,27 @@ export default function RegisterPage({ onRegisterSuccess = () => {}, onNavigate 
             </div>
           </div>
 
-          {/* Row 2: Email & Phone with Real-Time Validation */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-emerald-400/80">
-                <Mail className="w-4 h-4" />
-              </div>
-              <input
-                type="email"
-                name="email"
-                required
-                value={formData.email}
-                onChange={handleChange}
-                placeholder="Email Address *"
-                className={`w-full pl-9 pr-8 py-2.5 bg-[#021814]/70 border-b-2 ${
-                  formData.email ? (isEmailValid ? 'border-emerald-400' : 'border-rose-500') : 'border-emerald-800/60'
-                } focus:border-emerald-400 rounded-t-lg text-xs sm:text-sm font-medium text-white placeholder-slate-400 focus:outline-none transition-all`}
-              />
-              {formData.email && (
-                <div className="absolute right-2.5 top-3">
-                  {isEmailValid ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <AlertCircle className="w-3.5 h-3.5 text-rose-400" />}
-                </div>
-              )}
+          {/* Row 2: Email Address with Real-Time Validation */}
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-emerald-400/80">
+              <Mail className="w-4 h-4" />
             </div>
-
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-emerald-400/80">
-                <Phone className="w-4 h-4" />
+            <input
+              type="email"
+              name="email"
+              required
+              value={formData.email}
+              onChange={handleChange}
+              placeholder="Email Address *"
+              className={`w-full pl-9 pr-8 py-2.5 bg-[#021814]/70 border-b-2 ${
+                formData.email ? (isEmailValid ? 'border-emerald-400' : 'border-rose-500') : 'border-emerald-800/60'
+              } focus:border-emerald-400 rounded-t-lg text-xs sm:text-sm font-medium text-white placeholder-slate-400 focus:outline-none transition-all`}
+            />
+            {formData.email && (
+              <div className="absolute right-2.5 top-3">
+                {isEmailValid ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <AlertCircle className="w-3.5 h-3.5 text-rose-400" />}
               </div>
-              <input
-                type="tel"
-                name="phone"
-                value={formData.phone}
-                onChange={handleChange}
-                placeholder="Phone Number"
-                className={`w-full pl-9 pr-8 py-2.5 bg-[#021814]/70 border-b-2 ${
-                  formData.phone ? (isPhoneValid ? 'border-emerald-400' : 'border-rose-500') : 'border-emerald-800/60'
-                } focus:border-emerald-400 rounded-t-lg text-xs sm:text-sm font-medium text-white placeholder-slate-400 focus:outline-none transition-all`}
-              />
-              {formData.phone && (
-                <div className="absolute right-2.5 top-3">
-                  {isPhoneValid ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <AlertCircle className="w-3.5 h-3.5 text-rose-400" />}
-                </div>
-              )}
-            </div>
+            )}
           </div>
 
           {/* Row 3: Country & Referral Code */}

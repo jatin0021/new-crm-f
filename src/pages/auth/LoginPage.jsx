@@ -1,14 +1,12 @@
 import React, { useState } from 'react';
 import { useAlert } from '../../context/AlertContext';
-import { Eye, EyeOff, Mail, Phone, Lock, AlertCircle, ArrowRight, User, CheckSquare, Square } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, AlertCircle, ArrowRight, CheckSquare, Square } from 'lucide-react';
 import AuthLayout from '../../components/auth/AuthLayout';
 import { API_BASE_URL, safeJsonFetch } from '../../config/api';
 
 export default function LoginPage({ onLoginSuccess = () => {}, onNavigate = () => {} }) {
   const { alertInfo } = useAlert();
-  const [activeLoginTab, setActiveLoginTab] = useState('email'); // 'email' or 'phone'
   const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
@@ -23,9 +21,9 @@ export default function LoginPage({ onLoginSuccess = () => {}, onNavigate = () =
 
     try {
       const payload = {
+        email,
         password,
-        turnstile_token: turnstileToken,
-        ...(activeLoginTab === 'email' ? { email } : { phone })
+        turnstile_token: turnstileToken
       };
 
       const data = await safeJsonFetch('/api/auth/login', {
@@ -86,32 +84,6 @@ export default function LoginPage({ onLoginSuccess = () => {}, onNavigate = () =
           </p>
         </div>
 
-        {/* Tab Switcher (Email Address vs Phone Number) */}
-        <div className="bg-[#021814]/90 p-1 rounded-xl flex items-center gap-1 border border-emerald-500/20 max-w-xs mx-auto">
-          <button
-            type="button"
-            onClick={() => setActiveLoginTab('email')}
-            className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-              activeLoginTab === 'email'
-                ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            Email Address
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveLoginTab('phone')}
-            className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-              activeLoginTab === 'phone'
-                ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            Phone Number
-          </button>
-        </div>
-
         {/* Error Alert */}
         {errorMessage && (
           <div className="bg-rose-950/60 border border-rose-500/30 text-rose-300 px-3.5 py-2.5 rounded-xl text-xs font-semibold flex items-center gap-2 text-left animate-in fade-in">
@@ -123,36 +95,20 @@ export default function LoginPage({ onLoginSuccess = () => {}, onNavigate = () =
         {/* Form Inputs */}
         <form onSubmit={handleSubmit} className="space-y-4 text-left">
           
-          {/* Email / Phone Field */}
-          {activeLoginTab === 'email' ? (
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-emerald-400/80">
-                <User className="w-4 h-4" />
-              </div>
-              <input
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="Email Address"
-                className="w-full pl-10 pr-4 py-3 bg-[#021814]/70 border-b-2 border-emerald-800/60 focus:border-emerald-400 rounded-t-lg text-xs sm:text-sm font-medium text-white placeholder-slate-400 focus:outline-none transition-all duration-200"
-              />
+          {/* Email Address Field */}
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-emerald-400/80">
+              <Mail className="w-4 h-4" />
             </div>
-          ) : (
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-emerald-400/80">
-                <Phone className="w-4 h-4" />
-              </div>
-              <input
-                type="tel"
-                required
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="Phone Number"
-                className="w-full pl-10 pr-4 py-3 bg-[#021814]/70 border-b-2 border-emerald-800/60 focus:border-emerald-400 rounded-t-lg text-xs sm:text-sm font-medium text-white placeholder-slate-400 focus:outline-none transition-all duration-200"
-              />
-            </div>
-          )}
+            <input
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Email Address"
+              className="w-full pl-10 pr-4 py-3 bg-[#021814]/70 border-b-2 border-emerald-800/60 focus:border-emerald-400 rounded-t-lg text-xs sm:text-sm font-medium text-white placeholder-slate-400 focus:outline-none transition-all duration-200"
+            />
+          </div>
 
           {/* Password Field */}
           <div className="space-y-2">

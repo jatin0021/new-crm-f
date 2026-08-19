@@ -203,11 +203,9 @@ export default function App() {
   const handleImpersonateUser = async (targetUserEmailOrId) => {
     try {
       const adminToken = localStorage.getItem('crm_admin_token');
-      // If user object or string passed
-      let targetId = targetUserEmailOrId;
-      if (typeof targetUserEmailOrId === 'string' && targetUserEmailOrId.includes('@')) {
-        // Fallback target ID if lookup needed
-        targetId = 1;
+      let targetPayload = targetUserEmailOrId;
+      if (typeof targetUserEmailOrId === 'object' && targetUserEmailOrId !== null) {
+        targetPayload = targetUserEmailOrId.id || targetUserEmailOrId.email;
       }
 
       const res = await fetch(getApiUrl('/api/admin/impersonate'), {
@@ -216,7 +214,7 @@ export default function App() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${adminToken}`
         },
-        body: JSON.stringify({ target_user_id: targetId })
+        body: JSON.stringify({ target_user_id: targetPayload })
       });
 
       const data = await res.json();
@@ -232,25 +230,10 @@ export default function App() {
         setActiveTabState('Home');
         navigateTo('/');
       } else {
-        // Dev fallback impersonation object
-        const fallbackUser = {
-          id: 1,
-          first_name: 'John',
-          last_name: 'Doe (Impersonated)',
-          email: typeof targetUserEmailOrId === 'string' ? targetUserEmailOrId : 'trader@example.com',
-          country: 'United States',
-          kyc_status: 'verified',
-          email_verified: true,
-          isImpersonating: true
-        };
-        localStorage.setItem('crm_user', JSON.stringify(fallbackUser));
-        setCurrentUser(fallbackUser);
-        setAuthView(null);
-        setActiveTabState('Home');
-        navigateTo('/');
+        console.error('Impersonation failed:', data?.message);
       }
     } catch (e) {
-      console.warn('Impersonation call fallback:', e);
+      console.warn('Impersonation error:', e);
     }
   };
 
